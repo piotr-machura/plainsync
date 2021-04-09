@@ -1,0 +1,1 @@
+# Synchronous plain text editor

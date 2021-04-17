@@ -4,10 +4,11 @@ import socketserver
 import time
 import hashlib
 
-from protocol.request import Request, AuthRequest, FileListRequest, PullRequest
-from protocol.response import AuthResponse, ErrResponse, FileListResponse, PullResponse
-from protocol.message import MessageType
-from protocol import transfer
+from lib.request import Request, AuthRequest, FileListRequest, PullRequest
+from lib.response import AuthResponse, ErrResponse, FileListResponse, PullResponse
+from lib.message import MessageType
+from lib import transfer
+from lib import server
 
 
 class TCPHandler(socketserver.BaseRequestHandler):

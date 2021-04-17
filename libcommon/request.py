@@ -41,6 +41,7 @@ class PushRequest(Request):
     """Request to push local changes to the server.
 
     Items:
+        userID: the ID of the user requesting file push.
         file: the file to be updated.
         content: the contents to update the file with.
     """
@@ -67,7 +68,9 @@ class PullRequest(Request):
         self.file = file
 
 class FileListRequest(Request):
-    """Request listing files owned/borrowed by the current user.
+    """Request listing files accessible by the current user.
+
+    Simple wrapper for the regular Request with an approprieate message type.
     """
     def __init__(self, userID=None):
         super().__init__(

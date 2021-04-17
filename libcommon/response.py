@@ -1,7 +1,6 @@
 """Response module.
 
-
-Contains the `Response` classes sent by client to a server.
+Contains the `Response` classes sent by server to the client
 """
 from .message import Message, MessageType
 
@@ -55,9 +54,11 @@ class AuthResponse(Response):
 
     Issued after succesfull authentication.
 
+    Args:
+        user: the just authenticated user.
+
     Items:
         userID: a generated ID of the user authenticating him in this session.
-        user: username of the just-authenticated user.
     """
     def __init__(self, userID=None, user=''):
         super().__init__(
@@ -69,19 +70,21 @@ class AuthResponse(Response):
 class FileListResponse(Response):
     """Response with file names owned by the user.
 
+    Args:
+        user: the user for which the file list has been sent.
+
     Items:
         filelist: a list of files accessible to the user as a dictionary of
-                  filename : owned/borrowed pairs.
-        user: user for which the lsit was requested.
+                  (filename, owner) pairs.
     """
-    def __init__(self, filelist=None, user=''):
+    def __init__(self, files=None, user=''):
         super().__init__(
             msgType=MessageType.LIST_FILES,
             description=f'Sent file list for user {user}',
         )
-        self.filelist = filelist
-        if self.filelist is None:
-            self.filelist = list()
+        self.files = files
+        if self.files is None:
+            self.files = list()
 
 class ErrResponse(Response):
     """ Error response class.

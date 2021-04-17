@@ -41,7 +41,7 @@ def authenticate(rec):
     )
 
 
-# This emulates the server
+# This emulates the server AND IS VERY UGLY
 def server(msgSent):
     rec = Request.fromJSON(msgSent)
     response = ErrResponse(
@@ -65,9 +65,9 @@ def server(msgSent):
             filelist = dict()
             for f in FILES:
                 if FILES[f]['owner'] == username:
-                    filelist[f] = 'owner'
+                    filelist[f] = username
                 elif username in FILES[f]['users']:
-                    filelist[f] = 'borrowed'
+                    filelist[f] = FILES[f]['owner']
             return FileListResponse(filelist).toJSON()
         elif rec.type == MessageType.PULL:
             # Not empty and valid - pull the file contents
@@ -113,7 +113,7 @@ resp = FileListResponse.fromJSON(re)
 if resp.type == MessageType.ERR:
     print(resp.description)
     exit(1)
-files = resp.filelist
+files = resp.files
 # Pull the files owned/borrowed by the user
 for f in files:
     ownership = files[f]
@@ -124,5 +124,5 @@ for f in files:
     if resp.type == MessageType.ERR:
         print(resp.description)
         exit(1)
-    print(f'{f} ({ownership})')
+    print(f'{f} (owner: {ownership})')
     print(resp.content)

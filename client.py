@@ -13,7 +13,7 @@ PORT = 9999    # The port used by the server
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    req = AuthRequest(user='user', passwd='456')
+    req = AuthRequest(user='billy', passwd='1223')
     # Send it to a server as JSON
     transfer.send(s, req)
     resp = AuthResponse.fromJSON(transfer.recieve(s))
@@ -25,7 +25,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     myID = resp.userID
     # Request files owned and borrowed by the user
     print(myID)
-    req = FileListRequest(myID)
+    req = FileListRequest()
     transfer.send(s, req)
     resp = FileListResponse.fromJSON(transfer.recieve(s))
     if resp.type == MessageType.ERR:
@@ -37,7 +37,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     for f in files:
         time.sleep(5)
         ownership = files[f]
-        req = PullRequest(userID=myID, file=f)
+        req = PullRequest(file=f)
         transfer.send(s, req)
         resp = PullResponse.fromJSON(transfer.recieve(s))
         if resp.type == MessageType.ERR:

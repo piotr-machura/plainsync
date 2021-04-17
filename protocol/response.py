@@ -95,8 +95,8 @@ class ErrResponse(Response):
         action: string descibing the action in which the error ocured.
         err: error description with optional stack trace.
     """
-    def __init__(self, action='', err=''):
+    def __init__(self, err=''):
         super().__init__(
             msgType=MessageType.ERR,
-            description=f'Action: {action} :: Error: {err}.',
+            description=f'Error: {err}.',
         )

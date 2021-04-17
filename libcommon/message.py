@@ -18,22 +18,21 @@ class MessageType(str, Enum):
     AUTH = 'AUTH'
     PUSH = 'PUSH'
     PULL = 'PULL'
+    LIST_FILES = 'LIST_FILES'
 
 
 class Message():
-    """Message class built from a dictionary.
+    """Message class.
 
     Turned from/into a JSON string when transmitted over TCP as means of
     client-server communication.
 
     Items:
-        'type' - MessageType enum specifying the type of message.
-        'content' - string specifying message contents.
+       type: MessageType enum specifying the type of message.
     """
-    def __init__(self, msgType=MessageType.NONE, content=''):
+    def __init__(self, msgType=MessageType.NONE):
         super().__init__()
         self.type = msgType
-        self.content = content
 
     def __str__(self):
         return str(self.__dict__)
@@ -44,22 +43,24 @@ class Message():
         Returns:
             A viable JSON string obtained from the message.
         """
-
-        return json.dumps( self.__dict__)
+        return json.dumps(self.__dict__, indent=2)
 
     @classmethod
     def fromJSON(cls, jsonStr):
         """Recreates the Message form a JSON string.
+
+        **Warning:** in order for this to work ALL classes extending Message
+        must have a default empty constructor.
 
         Returns:
             A new Message object created form the JSON string.
         """
         # Load the json string into a Python dict
         jsonDict = json.loads(jsonStr)
-        # Convert the message type to enum
         new = cls()
-        # Copy all other keys 'as-is'
+        # Copy all keys into attributes
         for key, value in jsonDict.items():
             setattr(new, key, value)
+        # Turn type into enum from JSON's string
         new.type = MessageType[jsonDict['type']]
         return new

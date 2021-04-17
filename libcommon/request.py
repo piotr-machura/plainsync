@@ -32,8 +32,6 @@ class AuthRequest(Request):
         super().__init__(
             userID=None,
             msgType=MessageType.AUTH,
-            # This is purely cosmetic
-            content=f'Authenticate user {user} with password {passwd}',
         )
         self.user = user
         self.passwd = passwd
@@ -46,13 +44,13 @@ class PushRequest(Request):
         file: the file to be updated.
         content: the contents to update the file with.
     """
-    def __init__(self, userID=None, file=None, content='', **kwargs):
+    def __init__(self, userID=None, file=None, content=''):
         super().__init__(
             userID=userID,
             msgType=MessageType.PUSH,
-            content=content,
         )
-        self['file'] = file
+        self.content=content
+        self.file = file
 
 
 class PullRequest(Request):
@@ -61,10 +59,18 @@ class PullRequest(Request):
     Items:
         file: the file to be pulled.
     """
-    def __init__(self, userID=None, file=None, **kwargs):
+    def __init__(self, userID=None, file=None):
         super().__init__(
             userID=userID,
             msgType=MessageType.PULL,
-            content=f'Pull file {file} from remote as user {userID}.',
         )
         self.file = file
+
+class FileListRequest(Request):
+    """Request listing files owned/borrowed by the current user.
+    """
+    def __init__(self, userID=None):
+        super().__init__(
+            userID=userID,
+            msgType=MessageType.LIST_FILES,
+        )

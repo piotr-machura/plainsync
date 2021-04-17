@@ -44,7 +44,7 @@ class PullResponse(Response):
     def __init__(self, file='', content=''):
         super().__init__(
             msgType=MessageType.PULL,
-            description=f'Sending file contents :: {file}',
+            description=f'Sending file contents: {file}',
         )
         self.content = content
 
@@ -63,7 +63,7 @@ class AuthResponse(Response):
     def __init__(self, userID=None, user=''):
         super().__init__(
             msgType=MessageType.AUTH,
-            description=f'Authenticated {user}',
+            description=f'Authenticated :: {user}',
         )
         self.userID=userID
 
@@ -80,11 +80,11 @@ class FileListResponse(Response):
     def __init__(self, files=None, user=''):
         super().__init__(
             msgType=MessageType.LIST_FILES,
-            description=f'Sent file list for user {user}',
+            description=f'Sending file list: {user}',
         )
         self.files = files
         if self.files is None:
-            self.files = list()
+            self.files = dict()
 
 class ErrResponse(Response):
     """ Error response class.
@@ -98,5 +98,5 @@ class ErrResponse(Response):
     def __init__(self, action='', err=''):
         super().__init__(
             msgType=MessageType.ERR,
-            description=f'Action: {action} :: Error {err}.',
+            description=f'Action: {action} :: Error: {err}.',
         )

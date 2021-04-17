@@ -35,28 +35,31 @@ class Message():
         self.type = msgType
 
     def __str__(self):
-        return str(self.__dict__)
+        return json.dumps(self.__dict__)
 
-    def toJSON(self):
-        """Converts the message to a JSON string ready for shipment.
+    def sendable(self):
+        """Converts the message to a JSON UTF-8 bytestring ready for shipment.
 
         Returns:
-            A viable JSON string obtained from the message.
+            Bytes object where the first 8 bits represent length of the UTF-8
+            encoded message as uint64 in byteorder 'big' of, after which the
+            message as UTF-8 encoded JSON bytes object follows.
         """
-        return json.dumps(self.__dict__, indent=2)
+        byteStr = str(self).encode('utf-8')
+        return len(byteStr).to_bytes(8, byteorder='big', signed=False)+byteStr
 
     @classmethod
-    def fromJSON(cls, jsonStr):
-        """Recreates the Message form a JSON string.
+    def fromSendable(cls, jsonBytes):
+        """Recreates the Message form a UTF-8 JSON byte string.
 
         **Warning:** in order for this to work ALL classes extending Message
         must have a default empty constructor.
 
         Returns:
-            A new Message object created form the JSON string.
+            A new Message object created form the JSON byte string.
         """
         # Load the json string into a Python dict
-        jsonDict = json.loads(jsonStr)
+        jsonDict = json.loads(jsonBytes.decode('utf-8'))
         new = cls()
         # Copy all keys into attributes
         for key, value in jsonDict.items():

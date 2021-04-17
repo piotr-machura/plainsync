@@ -1,128 +1,135 @@
+import socketserver
+import time
+
 from libcommon.request import *
 from libcommon.response import *
 from libcommon.message import MessageType
 
-# A wannabe SQL database
-SERVER_USERIDS = {}
-USERS = {'user': '456', 'billy': '123'}
-FILES = {
-    'a.txt': {
-        'owner': 'user',
-        'users': {'billy'},
-        'content': 'conent of file a.txt',
-    },
-    'b.txt': {
-        'owner': 'billy',
-        'users': {},
-        'content': 'conent of file b.txt',
-    },
-    'c.txt': {
-        'owner': 'user',
-        'users': {},
-        'content': 'conent of file b.txt',
-    },
-}
 
+class TCPHandler(socketserver.BaseRequestHandler):
+    """
+    The request handler class for our server.
 
-def authenticate(rec):
-    current_action = f'Authenticate {rec.user}'
-    if rec.user in USERS and USERS[rec.user] == rec.passwd:
-        # Hash of username, time and IP address
-        ID = '0987'
-        # Add our suer to the active sessions database
-        SERVER_USERIDS.update({ID: rec.user})
-        return AuthResponse(
-            userID=ID,
-            user=rec.user,
-        )
-    return ErrResponse(
-        action=current_action,
-        err='Wrong username or password',
-    )
+    It is instantiated once per connection to the server, and must
+    override the handle() method to implement communication to the
+    client.
+    """
+    HOST = 'localhost'
+    PORT = 9999
+    # A wannabe SQL database
+    USERS = {'user': '456', 'billy': '123'}
+    FILES = {
+        'a.txt': {
+            'owner': 'user',
+            'users': {'billy'},
+            'content': 'conent of file a.txt',
+        },
+        'b.txt': {
+            'owner': 'billy',
+            'users': {},
+            'content': 'file\nb.txt\n more content',
+        },
+        'c.txt': {
+            'owner': 'user',
+            'users': {},
+            'content': 'conent of\nfile c.txt\n more contentss',
+        },
+    }
+    ACTIVE_USERIDS = {}
 
-
-# This emulates the server AND IS VERY UGLY
-def server(msgSent):
-    rec = Request.fromJSON(msgSent)
-    response = ErrResponse(
-        action='Connection',
-        err=f'Unknown action: {rec.type}',
-    )
-    if rec.userID is None:
-        response = ErrResponse(action='Connection', err='authenticate first')
-        if rec.type == MessageType.AUTH:
-            # Try to atuhenticate
-            rec = AuthRequest.fromJSON(msgSent)
-            return authenticate(rec).toJSON()
-    else:
-        # userID not empty
-        if rec.userID not in SERVER_USERIDS:
-            # Not empty but invalid - respond with error
+    def handle(self):
+        while True:
+            msgLen = int.from_bytes(
+                self.request.recv(8).strip(), byteorder='big')
+            if msgLen == 0:
+                break
+            data = self.request.recv(msgLen)
+            print(
+                f'{self.client_address[0]} wrote message of length {msgLen}:')
+            request = Request.fromSendable(data)
+            print(request)
             response = ErrResponse(
-                action='Connection', err=f'Unknown userID: {rec.userID}')
-        elif rec.type == MessageType.LIST_FILES:
-            username = SERVER_USERIDS[rec.userID]
-            filelist = dict()
-            for f in FILES:
-                if FILES[f]['owner'] == username:
-                    filelist[f] = username
-                elif username in FILES[f]['users']:
-                    filelist[f] = FILES[f]['owner']
-            return FileListResponse(filelist).toJSON()
-        elif rec.type == MessageType.PULL:
-            # Not empty and valid - pull the file contents
-            rec = PullRequest.fromJSON(msgSent)
-            current_action = f'Pull file {rec.file}'
-            # Database of files and users allowed to use them
-            if rec.file in FILES.keys() and (
-                    SERVER_USERIDS[rec.userID] in FILES[rec.file]['users']
-                    or SERVER_USERIDS[rec.userID] == FILES[rec.file]['owner']):
-                response = PullResponse(
-                    file=rec.file,
-                    content=FILES[rec.file]['content'],
-                )
-            else:
+                action='Connection',
+                err=f'Unknown action: {request.type}',
+            )
+            if request.userID is None:
                 response = ErrResponse(
-                    action=current_action,
-                    err=
-                    f'User {SERVER_USERIDS[rec.userID]} has no file {rec.file}.'
-                )
-        elif rec.type == MessageType.PUSH:
-            # Same here but I'm lazy
-            pass
-    return response.toJSON()
+                    action='Connection', err='authenticate first')
+                if request.type == MessageType.AUTH:
+                    # Try to atuhenticate
+                    request = AuthRequest.fromSendable(data)
+                    response = self.authenticate(request)
+            else:
+                if request.userID not in self.ACTIVE_USERIDS:
+                    response = ErrResponse(
+                        action='Connection',
+                        err=f'Unknown userID: {request.userID}',
+                    )
+                elif request.type == MessageType.LIST_FILES:
+                    request = FileListRequest.fromSendable(data)
+                    response = self.listFiles(request)
+                elif request.type == MessageType.PULL:
+                    request = PullRequest.fromSendable(data)
+                    response = self.pullFile(request)
+                elif request.type == MessageType.PUSH:
+                    # Same here but I'm lazy
+                    pass
+            print(response)
+            self.request.sendall(response.sendable())
+        print(f'Closed connection with {self.client_address[0]}')
+
+    def authenticate(self, request):
+        current_action = f'Authenticate {request.user}'
+        if request.user in self.USERS and self.USERS[
+                request.user] == request.passwd:
+            # Hash of username, time and IP address
+            ID = str(time.time())+request.user+self.client_address[0]
+            # Add our suer to the active sessions database
+            self.ACTIVE_USERIDS.update({ID: request.user})
+            return AuthResponse(
+                userID=ID,
+                user=request.user,
+            )
+        return ErrResponse(
+            action=current_action,
+            err='Wrong username or password',
+        )
+
+    def listFiles(self, request):
+        username = self.ACTIVE_USERIDS[request.userID]
+        filelist = dict()
+        for f in self.FILES:
+            if self.FILES[f]['owner'] == username:
+                filelist[f] = username
+            elif username in self.FILES[f]['users']:
+                filelist[f] = self.FILES[f]['owner']
+        return FileListResponse(filelist)
+
+    def pullFile(self, request):
+        current_action = f'Pull file {request.file}'
+        # Database of files and users allowed to use them
+        if request.file in self.FILES.keys() and (
+                self.ACTIVE_USERIDS[request.userID]
+                in self.FILES[request.file]['users']
+                or self.ACTIVE_USERIDS[request.userID]
+                == self.FILES[request.file]['owner']):
+            return PullResponse(
+                file=request.file,
+                content=self.FILES[request.file]['content'],
+            )
+        else:
+            return ErrResponse(
+                action=current_action,
+                err=
+                f'User {self.ACTIVE_USERIDS[request.userID]} has no file {request.file}.'
+            )
 
 
-# CLIENT
-# ------
-# Try to authenticate
-req = AuthRequest(user='billy', passwd='123')
-# Send it to a server as JSON
-msg = req.toJSON()
-# Recieve it as a JSON and parse
-resp = AuthResponse.fromJSON(server(msg))
-if resp.type == MessageType.ERR:
-    print(resp.description)
-    exit(1)
-# Save my ID for future connections
-myID = resp.userID
-# Request files owned and borrowed by the user
-req = FileListRequest(myID)
-re = server(req.toJSON())
-resp = FileListResponse.fromJSON(re)
-if resp.type == MessageType.ERR:
-    print(resp.description)
-    exit(1)
-files = resp.files
-# Pull the files owned/borrowed by the user
-for f in files:
-    ownership = files[f]
-    pr = PullRequest(userID=myID, file=f)
-    msg = pr.toJSON()
-    re = server(msg)
-    resp = PullResponse.fromJSON(re)
-    if resp.type == MessageType.ERR:
-        print(resp.description)
-        exit(1)
-    print(f'{f} (owner: {ownership})')
-    print(resp.content)
+with socketserver.ThreadingTCPServer(
+    (
+        TCPHandler.HOST,
+        TCPHandler.PORT,
+    ),
+        TCPHandler,
+) as server:
+    server.serve_forever()

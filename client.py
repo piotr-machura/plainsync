@@ -1,26 +1,22 @@
+"""Client executable module."""
+
 import time
 import socket
-from libcommon.request import *
-from libcommon.response import *
-from libcommon.message import MessageType
 
-HOST = '127.0.0.1'  # The server's hostname or IP address
-PORT = 9999# The port used by the server
+from protocol.request import AuthRequest, FileListRequest, PullRequest
+from protocol.response import AuthResponse, FileListResponse, PullResponse
+from protocol.message import MessageType
+from protocol import transfer
 
-def recieve(sock):
-    msgLen = int.from_bytes(sock.recv(8).strip(), byteorder='big')
-    return sock.recv(msgLen)
-
-def send(sock, request):
-    sock.sendall(request.sendable())
-
+HOST = '127.0.0.1'    # The server's hostname or IP address
+PORT = 9999    # The port used by the server
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
     req = AuthRequest(user='user', passwd='456')
     # Send it to a server as JSON
-    send(s, req)
-    resp = AuthResponse.fromSendable(recieve(s))
+    transfer.send(s, req)
+    resp = AuthResponse.fromJSON(transfer.recieve(s))
     if resp.type == MessageType.ERR:
         print(resp.description)
         s.close()
@@ -30,8 +26,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # Request files owned and borrowed by the user
     print(myID)
     req = FileListRequest(myID)
-    send(s, req)
-    resp = FileListResponse.fromSendable(recieve(s))
+    transfer.send(s, req)
+    resp = FileListResponse.fromJSON(transfer.recieve(s))
     if resp.type == MessageType.ERR:
         print(resp.description)
         s.close()
@@ -42,8 +38,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         time.sleep(5)
         ownership = files[f]
         req = PullRequest(userID=myID, file=f)
-        send(s, req)
-        resp = PullResponse.fromSendable(recieve(s))
+        transfer.send(s, req)
+        resp = PullResponse.fromJSON(transfer.recieve(s))
         if resp.type == MessageType.ERR:
             print(resp.description)
             s.close()

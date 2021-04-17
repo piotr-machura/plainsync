@@ -1,9 +1,12 @@
+"""Server executable module."""
+
 import socketserver
 import time
 
-from libcommon.request import *
-from libcommon.response import *
-from libcommon.message import MessageType
+from protocol.request import Request, AuthRequest, FileListRequest, PullRequest
+from protocol.response import AuthResponse, ErrResponse, FileListResponse, PullResponse
+from protocol.message import MessageType
+from protocol import transfer
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
@@ -39,14 +42,12 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         while True:
-            msgLen = int.from_bytes(
-                self.request.recv(8).strip(), byteorder='big')
-            if msgLen == 0:
+            try:
+                data = transfer.recieve(self.request)
+            except ConnectionAbortedError:
                 break
-            data = self.request.recv(msgLen)
-            print(
-                f'{self.client_address[0]} wrote message of length {msgLen}:')
-            request = Request.fromSendable(data)
+            print(f'{self.client_address[0]} wrote:')
+            request = Request.fromJSON(data)
             print(request)
             response = ErrResponse(
                 action='Connection',
@@ -57,7 +58,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
                     action='Connection', err='authenticate first')
                 if request.type == MessageType.AUTH:
                     # Try to atuhenticate
-                    request = AuthRequest.fromSendable(data)
+                    request = AuthRequest.fromJSON(data)
                     response = self.authenticate(request)
             else:
                 if request.userID not in self.ACTIVE_USERIDS:
@@ -66,16 +67,16 @@ class TCPHandler(socketserver.BaseRequestHandler):
                         err=f'Unknown userID: {request.userID}',
                     )
                 elif request.type == MessageType.LIST_FILES:
-                    request = FileListRequest.fromSendable(data)
+                    request = FileListRequest.fromJSON(data)
                     response = self.listFiles(request)
                 elif request.type == MessageType.PULL:
-                    request = PullRequest.fromSendable(data)
+                    request = PullRequest.fromJSON(data)
                     response = self.pullFile(request)
                 elif request.type == MessageType.PUSH:
                     # Same here but I'm lazy
                     pass
             print(response)
-            self.request.sendall(response.sendable())
+            transfer.send(self.request, response)
         print(f'Closed connection with {self.client_address[0]}')
 
     def authenticate(self, request):
@@ -83,7 +84,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         if request.user in self.USERS and self.USERS[
                 request.user] == request.passwd:
             # Hash of username, time and IP address
-            ID = str(time.time())+request.user+self.client_address[0]
+            ID = str(time.time()) + request.user + self.client_address[0]
             # Add our suer to the active sessions database
             self.ACTIVE_USERIDS.update({ID: request.user})
             return AuthResponse(
@@ -117,12 +118,11 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 file=request.file,
                 content=self.FILES[request.file]['content'],
             )
-        else:
-            return ErrResponse(
-                action=current_action,
-                err=
-                f'User {self.ACTIVE_USERIDS[request.userID]} has no file {request.file}.'
-            )
+        return ErrResponse(
+            action=current_action,
+            err=
+            f'User {self.ACTIVE_USERIDS[request.userID]} has no file {request.file}.'
+        )
 
 
 with socketserver.ThreadingTCPServer(

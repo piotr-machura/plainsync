@@ -15,7 +15,6 @@ class MessageType(str, Enum):
     NONE = 'NONE'
     OK = 'OK'
     ERR = 'ERR'
-    UNAUTH = 'UNAUTH'
     AUTH = 'AUTH'
     PUSH = 'PUSH'
     PULL = 'PULL'

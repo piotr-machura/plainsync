@@ -1,10 +1,24 @@
 from libcommon.request import Request, PullRequest, AuthRequest
-from libcommon.response import Response, OkResponse, ErrResponse
+from libcommon.response import Response, OkResponse, ErrResponse, AuthResponse
 from libcommon.message import MessageType
 
 # Server keeps the connected ID:user pairs here
 SERVER_USERIDS = {}
 
+FILES = {
+    'a.txt': {
+        'users': {'user', 'billy'},
+        'content': 'conent of file a.txt',
+    },
+    'b.txt': {
+        'users': {'billy'},
+        'content': 'conent of file b.txt',
+    },
+    'c.txt': {
+        'users': {'user'},
+        'content': 'conent of file b.txt',
+    },
+}
 
 # This emulates the server
 def server(msgSent):
@@ -26,7 +40,11 @@ def server(msgSent):
                 ID = '0987'
                 # Add our suer to the active sessions database
                 SERVER_USERIDS.update({ID: rec.user})
-                response = OkResponse(userID=ID, action=description)
+                response = AuthResponse(
+                    userID=ID,
+                    user=rec.user,
+                    filelist=[key for key in FILES if rec.user in FILES[key]['users']],
+                )
             else:
                 response = ErrResponse(
                     action=description,
@@ -42,13 +60,11 @@ def server(msgSent):
             rec = PullRequest.fromJSON(msgSent)
             descitption = f'Pull file {rec.file}'
             # Database of files and users allowed to use them
-            SQL = {'a.txt': {'billy', 'user'}}
-            if rec.file in SQL.keys() and SERVER_USERIDS[rec.userID] in SQL[
-                    rec.file]:
+            if rec.file in FILES.keys() and SERVER_USERIDS[rec.userID] in FILES[
+                    rec.file]['users']:
                 response = OkResponse(
-                    userID=rec.userID,
                     action=descitption,
-                    content='(file contents). Hello world!',
+                    content=FILES[rec.file]['content'],
                 )
             else:
                 response = ErrResponse(
@@ -66,21 +82,24 @@ def server(msgSent):
 # CLIENT
 # ------
 # Try to authenticate
-aur = AuthRequest(user='billy', passwd='1234')
+aur = AuthRequest(user='billy', passwd='123')
 # Send it to a server as JSON
 msg = aur.toJSON()
 # Recieve it as a JSON and parse
-resp = Response.fromJSON(server(msg))
-if resp.type == MessageType.OK:
+re = server(msg)
+resp = Response.fromJSON(re)
+if resp.type == MessageType.AUTH:
+    resp = AuthResponse.fromJSON(re)
     # Save my ID for future connections
     myID = resp.userID
     # Try to pull a file
-    pr = PullRequest(userID=myID, file='a.txt')
-    msg = pr.toJSON()
-    resp = Response.fromJSON(server(msg))
-    if resp.type == MessageType.OK:
-        print(resp.content)
-    else:
-        print(resp.message)
+    for filename in resp.filelist:
+        pr = PullRequest(userID=myID, file=filename)
+        msg = pr.toJSON()
+        resp = Response.fromJSON(server(msg))
+        if resp.type == MessageType.OK:
+            print(resp.content)
+        else:
+            print(resp.message)
 else:
     print(resp.message)

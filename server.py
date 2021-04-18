@@ -19,7 +19,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
     override the handle() method to implement communication to the
     client.
     """
-    HOST = 'localhost'
+    HOST = '0.0.0.0'
     PORT = 9999
     # A wannabe SQL database
     USERS = {'user': '456', 'billy': '123'}

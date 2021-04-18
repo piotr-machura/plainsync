@@ -1,0 +1,12 @@
+version: '3.3'
+services:
+  plainsync:
+    container_name: plainsync-server
+    build: .
+    image: plainsync
+    ports:
+      - '9999:9999'
+    volumes:
+      - ./data/server:/plainsync/data/server
+    environment:
+      - PYTHONUNBUFFERED=1

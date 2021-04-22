@@ -22,7 +22,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.close()
         exit(1)
     # Save my ID for future connections
-    myID = resp.userID
+    myID = resp.sessionID
     # Request files owned and borrowed by the user
     print(myID)
     req = FileListRequest()

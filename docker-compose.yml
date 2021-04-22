@@ -8,5 +8,3 @@ services:
       - '9999:9999'
     volumes:
       - ./data/server:/plainsync/data/server
-    environment:
-      - PYTHONUNBUFFERED=1

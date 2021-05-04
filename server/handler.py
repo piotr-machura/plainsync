@@ -2,9 +2,10 @@
 
 Contains the handler and associated functions.
 """
-import socketserver
 import time
 import hashlib
+from socketserver import BaseRequestHandler
+from logging import info, warning
 
 from common.request import Request, AuthRequest, FileListRequest, PullRequest
 from common.response import AuthResponse, ErrResponse, FileListResponse, PullResponse
@@ -12,7 +13,7 @@ from common.message import MessageType
 from common import transfer
 
 
-class TCPHandler(socketserver.BaseRequestHandler):
+class TCPHandler(BaseRequestHandler):
     """
     The TCP request handler class.
 
@@ -44,7 +45,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         self.username = None
         super().__init__(*args, **kwargs)
 
-    def handle(self):
+    def setup(self):
         # Try and authenticate
         try:
             data = transfer.recieve(self.request)
@@ -53,7 +54,19 @@ class TCPHandler(socketserver.BaseRequestHandler):
         authRequest = AuthRequest.fromJSON(data)
         if authRequest.type == MessageType.AUTH:
             # Atuhenticate
-            response = self.authenticate(authRequest)
+            user = authRequest.user
+            passwd = authRequest.passwd
+            if user in self.USERS and self.USERS[user] == passwd:
+                # Save the username and the session ID hash
+                toHash = str(time.time()) + user + self.client_address[0]
+                self.sessionID = hashlib.sha1(toHash.encode('utf-8')).hexdigest()
+                self.username = user
+                response = AuthResponse(
+                    sessionID=self.sessionID,
+                    user=user,
+                )
+            else:
+                response = ErrResponse(err='Invalid username or password')
             transfer.send(self.request, response)
         else:
             transfer.send(
@@ -61,20 +74,21 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 ErrResponse(err='Unauthenticated'),
             )
 
+
+    def handle(self):
+
         if self.sessionID is None:
-            print(
-                '--------------\n' +
-                f'Unable to authenticate {self.client_address[0]}')
+            warning('Unable to authenticate %s', self.client_address[0])
             return
 
-        # The connection has been established
-        print(
-            '--------------\n' +
-            f'New session {self.sessionID} of user {self.username}')
+        info('New session %s of user %s', self.sessionID, self.username)
+        # Handle incoming requests
+
         while True:
             try:
                 data = transfer.recieve(self.request)
             except ConnectionAbortedError:
+                # The connection has been closed
                 break
             request = Request.fromJSON(data)
             if request.type == MessageType.LIST_FILES:
@@ -85,30 +99,18 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 response = self.pullFile(request)
             elif request.type == MessageType.PUSH:
                 # Same here but I'm lazy
-                pass
+                raise NotImplementedError
             else:
                 response = ErrResponse(err=f'Unknown action: {request.type}')
-            print(
-                '--------------\n' +
-                f'Session {self.sessionID} of user {self.username}:\n' +
-                f'Request: {request}\n' + f'Response: {response}')
-            transfer.send(self.request, response)
-        print(
-            '--------------\n' +
-            f'Closed session {self.sessionID} of user {self.username}')
-
-    def authenticate(self, request):
-        if request.user in self.USERS and self.USERS[
-                request.user] == request.passwd:
-            # Save the username and the session ID hash
-            toHash = str(time.time()) + request.user + self.client_address[0]
-            self.sessionID = hashlib.sha1(toHash.encode('utf-8')).hexdigest()
-            self.username = request.user
-            return AuthResponse(
-                sessionID=self.sessionID,
-                user=request.user,
+            info(
+                'Session %s of user %s: Request:%s Response:%s',
+                self.sessionID,
+                self.username,
+                request,
+                response,
             )
-        return ErrResponse(err='Invalid username or password')
+            transfer.send(self.request, response)
+        info('Closed session %s of user %s', self.sessionID, self.username)
 
     def listFiles(self):
         filelist = dict()

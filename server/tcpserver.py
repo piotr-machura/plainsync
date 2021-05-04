@@ -1,13 +1,19 @@
 """TCP server module.
 """
-import socketserver
+import os
+import logging
+from socketserver import ThreadingTCPServer
 from server import handler
 
-class TCPServer(socketserver.ThreadingTCPServer):
+
+class TCPServer(ThreadingTCPServer):
     """TCP server class".
     """
-    HOST = '0.0.0.0'
-    PORT = 9999
+    DEFAULT_HOST = '0.0.0.0'
+    DEFAULT_PORT = 9999
 
     def __init__(self):
-        super().__init__((self.HOST, self.PORT), handler.TCPHandler)
+        host = os.getenv('PLAINSYNC_HOST') or self.DEFAULT_HOST
+        port = os.getenv('PLAINSYNC_PORT') or self.DEFAULT_PORT
+        super().__init__((host, port), handler.TCPHandler)
+        logging.info('Started plainsync server on %s:%s', host, port)

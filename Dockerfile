@@ -6,4 +6,4 @@ VOLUME ["/plainsync/data/server"]
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["/usr/local/bin/python3","/plainsync/server.py"]
+CMD ["/usr/local/bin/python3","/plainsync/server.py","--log=info"]

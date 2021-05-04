@@ -6,4 +6,4 @@ Dockerfile
 client.py
 .git
 .gitignore
-lib/client/
+client/

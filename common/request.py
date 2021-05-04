@@ -2,7 +2,7 @@
 
 Contains the `Request` classes sent by the client to a server.
 """
-from lib.message import Message, MessageType
+from common.message import Message, MessageType
 
 
 class Request(Message):

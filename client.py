@@ -3,10 +3,10 @@
 import time
 import socket
 
-from lib.request import AuthRequest, FileListRequest, PullRequest
-from lib.response import AuthResponse, FileListResponse, PullResponse
-from lib.message import MessageType
-from lib import transfer
+from common.request import AuthRequest, FileListRequest, PullRequest
+from common.response import AuthResponse, FileListResponse, PullResponse
+from common.message import MessageType
+from common import transfer
 
 HOST = '127.0.0.1'    # The server's hostname or IP address
 PORT = 9999    # The port used by the server

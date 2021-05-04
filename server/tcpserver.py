@@ -1,7 +1,7 @@
 """TCP server module.
 """
 import socketserver
-from lib.server import handler
+from server import handler
 
 class TCPServer(socketserver.ThreadingTCPServer):
     """TCP server class".

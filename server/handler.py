@@ -6,10 +6,10 @@ import socketserver
 import time
 import hashlib
 
-from lib.request import Request, AuthRequest, FileListRequest, PullRequest
-from lib.response import AuthResponse, ErrResponse, FileListResponse, PullResponse
-from lib.message import MessageType
-from lib import transfer
+from common.request import Request, AuthRequest, FileListRequest, PullRequest
+from common.response import AuthResponse, ErrResponse, FileListResponse, PullResponse
+from common.message import MessageType
+from common import transfer
 
 
 class TCPHandler(socketserver.BaseRequestHandler):

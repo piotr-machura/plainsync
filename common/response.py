@@ -2,7 +2,7 @@
 
 Contains the `Response` classes sent by the server to a client.
 """
-from lib.message import Message, MessageType
+from common.message import Message, MessageType
 
 
 class Response(Message):

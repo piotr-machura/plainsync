@@ -27,9 +27,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print(myID)
     req = FileListRequest()
     transfer.send(s, req)
-    print(resp)
     resp = FileListResponse.fromJSON(transfer.recieve(s))
-    print(resp)
     if resp.type == MessageType.ERR:
         print(resp.description)
         s.close()

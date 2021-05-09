@@ -34,23 +34,22 @@ class TCPHandler(BaseRequestHandler):
         try:
             data = transfer.recieve(self.request)
             req = AuthRequest.fromJSON(data)
-
-            if req.type == MessageType.AUTH:
-                # Atuhenticate
-                user = req.user
-                passwd = req.passwd
-                dbmanager.authenticate(user, passwd)
-                # Save the username and the session ID hash
-                sessionID = str(time.time()) + user + self.client_address[0]
-                sessionID = hashlib.sha1(sessionID.encode('utf-8'))
-                self.sessionID = sessionID.hexdigest()[:12]
-                self.username = user
-                resp = AuthResponse(
-                    sessionID=self.sessionID,
-                    user=user,
-                )
-            else:
+            if req.type != MessageType.AUTH:
                 raise DatabaseException('Authenticate first')
+            # Authenticate
+            user = req.user
+            passwd = req.passwd
+            dbmanager.authenticate(user, passwd)
+            # Save the username and the session ID hash
+            sessionID = str(time.time()) + user + self.client_address[0]
+            sessionID = hashlib.sha1(sessionID.encode('utf-8'))
+            self.sessionID = sessionID.hexdigest()[:12]
+            self.username = user
+            resp = AuthResponse(
+                sessionID=self.sessionID,
+                user=user,
+            )
+            info('New session %s of user %s', self.sessionID, self.username)
         except (JSONDecodeError, TypeError, AttributeError) as ex:
             resp = ErrResponse(err=f'Could not parse request: {ex}')
             warning(
@@ -67,13 +66,11 @@ class TCPHandler(BaseRequestHandler):
             )
         except ConnectionAbortedError:
             return
-
         transfer.send(self.request, resp)
 
     def handle(self):
         if self.sessionID is None:
             return
-        info('New session %s of user %s', self.sessionID, self.username)
         while True:
             # Handle incoming requests
             try:

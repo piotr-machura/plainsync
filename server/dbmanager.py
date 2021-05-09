@@ -19,11 +19,11 @@ FILES = {
     },
     'b.txt': {
         'owner': 'billy',
-        'users': {},
+        'users': {'user'},
         'content': 'file\nb.txt\n more content',
     },
     'c.txt': {
-        'owner': 'user',
+        'owner': 'billy',
         'users': {},
         'content': 'conent of\nfile c.txt\n more contentss',
     },

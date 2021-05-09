@@ -2,6 +2,7 @@
 
 Contains the `Request` classes sent by the client to a server.
 """
+import json
 from common.message import Message, MessageType
 
 
@@ -45,6 +46,12 @@ class PushRequest(Request):
         super().__init__(msgType=MessageType.PUSH, )
         self.content = content
         self.file = file
+
+    def __str__(self):
+        dictionary = self.__dict__.copy()
+        del dictionary['content']
+        return json.dumps(dictionary)
+
 
 
 class PullRequest(Request):

@@ -3,8 +3,8 @@
 import time
 import socket
 
-from common.request import AuthRequest, FileListRequest, PullRequest
-from common.response import AuthResponse, FileListResponse, PullResponse
+from common.request import AuthRequest, FileListRequest, PullRequest, PushRequest
+from common.response import AuthResponse, FileListResponse, PullResponse, OkResponse
 from common.message import MessageType
 from common import transfer
 
@@ -13,7 +13,7 @@ PORT = 9999    # The port used by the server
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    req = AuthRequest(user='billys', passwd='123')
+    req = AuthRequest(user='billy', passwd='123')
     # Send it to a server as JSON
     transfer.send(s, req)
     resp = AuthResponse.fromJSON(transfer.recieve(s))
@@ -27,7 +27,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print(myID)
     req = FileListRequest()
     transfer.send(s, req)
+    print(resp)
     resp = FileListResponse.fromJSON(transfer.recieve(s))
+    print(resp)
     if resp.type == MessageType.ERR:
         print(resp.description)
         s.close()
@@ -46,4 +48,3 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             exit(1)
         print(f'{f} (owner: {ownership})')
         print(resp.content)
-    s.close()

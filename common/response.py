@@ -2,6 +2,7 @@
 
 Contains the `Response` classes sent by the server to a client.
 """
+import json
 from common.message import Message, MessageType
 
 
@@ -48,6 +49,12 @@ class PullResponse(Response):
         )
         self.content = content
 
+    def __str__(self):
+        dictionary = self.__dict__.copy()
+        del dictionary['content']
+        return json.dumps(dictionary)
+
+
 
 class AuthResponse(Response):
     """Authentication response class.
@@ -75,7 +82,9 @@ class FileListResponse(Response):
 
     Items:
         filelist: a list of files accessible to the user as a dictionary of
-                  (filename, owner) pairs.
+                (filename, users), where the users is a list of authenticated
+                users OR a list with just the owner if it is different from the
+                requesting user.
     """
     def __init__(self, files=None, user=''):
         super().__init__(

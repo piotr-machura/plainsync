@@ -1,8 +1,13 @@
 """Database manager module.
 
-Processes request to read/write the database and/or the user files.
+Processes request to read/write the database and/or the user files. Raises
+DatabaseException if things go wrong.
 """
-from common import response
+
+
+class DatabaseException(Exception):
+    """Database exception class."""
+
 
 # A wannabe SQL database
 USERS = {'user': '456', 'billy': '123'}
@@ -24,6 +29,7 @@ FILES = {
     },
 }
 
+
 def authenticate(user, passwd):
     """Authenticate the user.
 
@@ -31,27 +37,36 @@ def authenticate(user, passwd):
         user: username to authenticate.
         passwd: password to authenticate.
 
-    Returns:
-        `True` if authenticated and `False` if not.
+    Raises:
+        DatabaseException if not authenticated.
     """
-    return user in USERS and USERS[user] == passwd
+    if user not in USERS or USERS[user] != passwd:
+        raise DatabaseException('Invalid username or password')
+
 
 def listFiles(username):
-    """List files availible for a given user.
+    """List files available for a given user.
 
     Args:
-        username (str): the user for which the files should be listed.
+        username: the user for which the files should be listed.
 
     Returns:
-        FileListResponse with files availible to the user.
+        Dictionary of (file, users), where the users is a list of
+        authenticated users OR a list with just the owner if it is different
+        from the requesting user.
+
+    Raises:
+        DatabaseException if the user does not exist.
     """
     filelist = dict()
+    if username not in USERS:
+        raise DatabaseException(f'No such user: {username}')
     for file in FILES:
         if FILES[file]['owner'] == username:
-            filelist[file] = username
+            filelist[file] = [username] + list(FILES[file]['users'])
         elif username in FILES[file]['users']:
-            filelist[file] = FILES[file]['owner']
-    return response.FileListResponse(filelist)
+            filelist[file] = [FILES[file]['owner']]
+    return filelist
 
 
 def pullFile(username, file):
@@ -62,18 +77,17 @@ def pullFile(username, file):
         file: name of the file to be pulled.
 
     Returns:
-        PullResponse if the pull is succesfull or ErrResponse if it is not.
+        Contents of the specified file.
+
+    Raises:
+        DatabaseException if user has no access to specified file.
     """
     # Database of files and users allowed to use them
-    if file in FILES.keys() and (
-            username in FILES[file]['users']
-            or username == FILES[file]['owner']):
-        return response.PullResponse(
-            file=file,
-            content=FILES[file]['content'],
-        )
-    return response.ErrResponse(
-        err=f'User {username} has no access to file {file}')
+    if file in FILES.keys() and (username in FILES[file]['users']
+                                 or username == FILES[file]['owner']):
+        return FILES[file]['content']
+    raise DatabaseException(f'User {username} has no access to file {file}')
+
 
 def pushFile(username, file, contents):
     """Push file contents to the server.
@@ -83,7 +97,7 @@ def pushFile(username, file, contents):
         file: the file to be modified.
         contents: the file contents.
 
-    Returns:
-        PushResponse if the push is succesfull or ErrResponse if it is not.
+    Raises:
+        DatabaseException if user has no access to specified file.
     """
-    return response.ErrResponse(err='Pushing not implemented')
+    raise DatabaseException('Pushing not implemented')

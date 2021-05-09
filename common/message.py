@@ -52,6 +52,9 @@ class Message():
         **Warning:** in order for this to work ALL classes extending Message
         must have a default empty constructor.
 
+        Args:
+            jsonStr: valid JSON string obtained  with Message.toJSON.
+
         Returns:
             A new Message object created form the JSON byte string.
         """

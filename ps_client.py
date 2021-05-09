@@ -13,7 +13,7 @@ PORT = 9999    # The port used by the server
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    req = AuthRequest(user='billy', passwd='123')
+    req = AuthRequest(user='billys', passwd='123')
     # Send it to a server as JSON
     transfer.send(s, req)
     resp = AuthResponse.fromJSON(transfer.recieve(s))

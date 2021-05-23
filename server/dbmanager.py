@@ -3,101 +3,213 @@
 Processes request to read/write the database and/or the user files. Raises
 DatabaseException if things go wrong.
 """
+import sqlite3
+import os
+from server import config
+
+# Initial database setup
+with sqlite3.connect(config.DATABASE) as con:
+    print(config.DATABASE)
+    con.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS Files (
+            id string,
+            name string,
+            owner string,
+            last_edited timestamp,
+            last_edited_user string
+        );
+        ''')
+
+    con.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS Sessions (
+            id string,
+            user string,
+            now_editing string
+        );
+        ''')
+
+    con.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS Users (
+            username string,
+            password string
+        );
+        ''')
+
+    con.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS Links (
+            id string,
+            file string,
+            valid_until timestamp
+        );
+        ''')
+
+    con.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS Shares (
+            id string,
+            user string,
+            file string
+        );
+        ''')
+    con.commit()
 
 
 class DatabaseException(Exception):
     """Database exception class."""
 
 
-# A wannabe SQL database
-USERS = {'user': '456', 'billy': '123'}
-FILES = {
-    'a.txt': {
-        'owner': 'user',
-        'users': {'billy'},
-        'content': 'conent of file a.txt',
-    },
-    'b.txt': {
-        'owner': 'billy',
-        'users': {'user'},
-        'content': 'file\nb.txt\n more content',
-    },
-    'c.txt': {
-        'owner': 'billy',
-        'users': {},
-        'content': 'conent of\nfile c.txt\n more contentss',
-    },
-}
+class DatabaseManager:
+    """Database manager class.
 
-
-def authenticate(user, passwd):
-    """Authenticate the user.
-
-    Args:
-        user: username to authenticate.
-        passwd: password to authenticate.
-
-    Raises:
-        DatabaseException if not authenticated.
+    Wraps an sqlite connection to provide database access to TCPHandler.
     """
-    if user not in USERS or USERS[user] != passwd:
-        raise DatabaseException('Invalid username or password')
+    def __init__(self):
+        self.dbConnection = sqlite3.connect(config.DATABASE)
 
+    def __del__(self):
+        self.dbConnection.close()
 
-def listFiles(username):
-    """List files available for a given user.
+    def authenticate(self, user, passwd):
+        """Authenticate the user.
 
-    Args:
-        username: the user for which the files should be listed.
+        Args:
+            user: username to authenticate.
+            passwd: password to authenticate.
 
-    Returns:
-        Dictionary of (file, users), where the users is a list of
-        authenticated users OR a list with just the owner if it is different
-        from the requesting user.
+        Raises:
+            DatabaseException if not authenticated.
+        """
+        cur = self.dbConnection.cursor()
+        if not cur.execute(
+                '''
+            SELECT * FROM "Users" WHERE "username"=? AND "password"=?;
+            ''',
+            (user, passwd),
+        ).fetchone():
+            raise DatabaseException('Invalid username or password')
 
-    Raises:
-        DatabaseException if the user does not exist.
-    """
-    filelist = dict()
-    if username not in USERS:
-        raise DatabaseException(f'No such user: {username}')
-    for file in FILES:
-        if FILES[file]['owner'] == username:
-            filelist[file] = [username] + list(FILES[file]['users'])
-        elif username in FILES[file]['users']:
-            filelist[file] = [FILES[file]['owner']]
-    return filelist
+    def listFiles(self, username):
+        """List files available for a given user.
 
+        Args:
+            username: the user for which the files should be listed.
 
-def pullFile(username, file):
-    """Pull file contents from the server.
+        Returns:
+            Dictionary of (file ID, (info)) pairs, where the ID is the unique
+            ID assigned to every file and info is a dicitonary that contains
+            information about the owner, file name, last edited date and last
+            edited user.
+        Raises:
+            DatabaseException if the user does not exist.
+        """
+        fileList = dict()
+        cur = self.dbConnection.cursor()
+        owned = cur.execute(
+            '''
+            SELECT * FROM Files WHERE owner=?;
+            ''',
+            (username, ),
+        ).fetchall()
 
-    Args:
-        username: the user requesting the file contents.
-        file: name of the file to be pulled.
+        sharedIDs = [
+            fileID[0] for fileID in cur.execute(
+                '''
+            SELECT file FROM Shares WHERE user=?;
+            ''',
+                (username, ),
+            )
+        ]
+        borrowed = [
+            cur.execute(
+                '''
+                SELECT * FROM Files WHERE id=?;
+                ''',
+                (fileID, ),
+            ).fetchone() for fileID in sharedIDs
+        ]
+        print(owned)
+        print(borrowed)
+        for row in owned:
+            fileList[row[0]] = dict()
+            fileList[row[0]]['name'] = row[1]
+            fileList[row[0]]['owner'] = row[2]
+            fileList[row[0]]['last_edited'] = row[3]
+            fileList[row[0]]['last_edited_user'] = row[4]
+            fileList[row[0]]['shares'] = cur.execute(
+                '''
+                SELECT id, user FROM Shares WHERE file=?
+                ''',
+                (row[0], ),
+            ).fetchall()
+        for row in borrowed:
+            fileList[row[0]] = dict()
+            fileList[row[0]]['name'] = row[1]
+            fileList[row[0]]['owner'] = row[2]
+            fileList[row[0]]['last_edited'] = row[3]
+            fileList[row[0]]['last_edited_user'] = row[4]
 
-    Returns:
-        Contents of the specified file.
+        print(fileList)
+        return fileList
 
-    Raises:
-        DatabaseException if user has no access to specified file.
-    """
-    # Database of files and users allowed to use them
-    if file in FILES.keys() and (username in FILES[file]['users']
-                                 or username == FILES[file]['owner']):
-        return FILES[file]['content']
-    raise DatabaseException(f'User {username} has no access to file {file}')
+    def pullFile(self, username, fileID):
+        """Pull file contents from the server.
 
+        Args:
+            username: the user requesting the file contents.
+            fileID: ID of the file to be pulled.
 
-def pushFile(username, file, contents):
-    """Push file contents to the server.
+        Returns:
+            Contents of the specified file.
 
-    Args:
-        username: the user requesting the modification.
-        file: the file to be modified.
-        contents: the file contents.
+        Raises:
+            DatabaseException if user has no access to specified file.
+        """
+        cur = self.dbConnection.cursor()
+        if cur.execute(
+                '''
+            SELECT 1 FROM Files WHERE id=? AND owner=?
+            ''',
+            (fileID, username),
+        ).fetchone() or cur.execute(
+                '''
+                SELECT 1 FROM Shares WHERE file=? AND user=?
+                ''',
+            (fileID, username),
+        ).fetchone():
+            with open(config.STORAGE + os.sep + fileID) as fRequested:
+                return fRequested.read()
+        raise DatabaseException(
+            f'User {username} has no access to file {fileID}')
 
-    Raises:
-        DatabaseException if user has no access to specified file.
-    """
-    raise DatabaseException('Pushing not implemented')
+    def pushFile(self, username, fileID, contents):
+        """Push file contents to the server.
+
+        Args:
+            username: the user requesting the modification.
+            fileID: the file ID to be modified.
+            contents: the file contents.
+
+        Raises:
+            DatabaseException if user has no access to specified file.
+        """
+        cur = self.dbConnection.cursor()
+        if cur.execute(    # Check if the user owns the file
+                '''
+            SELECT 1 FROM Files WHERE id=? AND owner=?
+            ''',
+            (fileID, username),
+        ).fetchone() or cur.execute(    # or the file has been shared with him
+                '''
+            SELECT 1 FROM Shares WHERE file=? AND user=?
+            ''',
+            (fileID, username),
+        ).fetchone():
+            with open(config.STORAGE + os.sep + fileID, "w") as fRequested:
+                fRequested.write(contents)
+        else:
+            raise DatabaseException(
+                f'User {username} has no access to file {fileID}')

@@ -33,8 +33,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.close()
         exit(1)
     files = resp.files
+    print(files)
     # Pull the files owned/borrowed by the user
-    for f in files:
+    for f in files.keys():
         time.sleep(2)
         ownership = files[f]
         req = PullRequest(file=f)
@@ -44,5 +45,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print(resp.description)
             s.close()
             exit(1)
-        print(f'{f} (owner: {ownership})')
+        print(f'{f} ({ownership})')
         print(resp.content)
+    req = PushRequest(file='bfile', content='NEW CONTENT TO FILE B')
+    transfer.send(s, req)
+    resp = OkResponse.fromJSON(transfer.recieve(s))
+    print(resp)

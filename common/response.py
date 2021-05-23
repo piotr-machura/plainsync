@@ -82,9 +82,9 @@ class FileListResponse(Response):
 
     Items:
         filelist: a list of files accessible to the user as a dictionary of
-                (filename, users), where the users is a list of authenticated
-                users OR a list with just the owner if it is different from the
-                requesting user.
+            (file ID, (info)) pairs, where the ID is the unique ID assigned to
+            every file and info is a dicitonary that contains information about
+            the owner, file name, last edited date and last edited user.
     """
     def __init__(self, files=None, user=''):
         super().__init__(

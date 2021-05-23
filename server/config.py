@@ -23,10 +23,10 @@ DEFAULT_PORT = 9999
 PORT = _args.port or os.getenv('PLAINSYNC_PORT') or DEFAULT_PORT
 PORT = int(PORT)
 
-DEFAULT_STORAGE = os.getcwd() + os.pathsep + 'data'
+DEFAULT_STORAGE = os.getcwd() + os.sep + 'data'
 STORAGE = _args.storage or os.getenv('PLAINSYNC_STORAGE') or DEFAULT_STORAGE
 
-DEFAULT_DATABASE = STORAGE + os.pathsep + 'plainsync.sqlite'
+DEFAULT_DATABASE = STORAGE + os.sep + 'plainsync.sqlite'
 DATABASE = _args.database or os.getenv('PLAINSYNC_DATABASE') or DEFAULT_DATABASE
 
 DEFAULT_LOGLEVEL = 'INFO'

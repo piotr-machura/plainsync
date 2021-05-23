@@ -27,6 +27,7 @@ class TCPHandler(BaseRequestHandler):
     def __init__(self, *args, **kwargs):
         self.sessionID = None
         self.username = None
+        self.dataBase = dbmanager.DatabaseManager()
         super().__init__(*args, **kwargs)
 
     def setup(self):
@@ -39,7 +40,7 @@ class TCPHandler(BaseRequestHandler):
             # Authenticate
             user = req.user
             passwd = req.passwd
-            dbmanager.authenticate(user, passwd)
+            self.dataBase.authenticate(user, passwd)
             # Save the username and the session ID hash
             sessionID = str(time.time()) + user + self.client_address[0]
             sessionID = hashlib.sha1(sessionID.encode('utf-8'))
@@ -79,14 +80,14 @@ class TCPHandler(BaseRequestHandler):
                 if request.type == MessageType.LIST_FILES:
                     request = FileListRequest.fromJSON(data)
                     response = FileListResponse(
-                        files=dbmanager.listFiles(self.username),
+                        files=self.dataBase.listFiles(self.username),
                         user=self.username,
                     )
                 elif request.type == MessageType.PULL:
                     request = PullRequest.fromJSON(data)
                     response = PullResponse(
                         file=request.file,
-                        content=dbmanager.pullFile(
+                        content=self.dataBase.pullFile(
                             self.username,
                             request.file,
                         ),
@@ -94,7 +95,7 @@ class TCPHandler(BaseRequestHandler):
                 elif request.type == MessageType.PUSH:
                     # Same here but I'm lazy
                     request = PushRequest.fromJSON(data)
-                    dbmanager.pushFile(
+                    self.dataBase.pushFile(
                         self.username,
                         request.file,
                         request.content,

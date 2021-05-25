@@ -3,20 +3,20 @@
 import time
 import socket
 
-from common.request import AuthRequest, FileListRequest, PullRequest, PushRequest
-from common.response import AuthResponse, FileListResponse, PullResponse, OkResponse
+from common import request
+from common import response
 from common.message import MessageType
 from common import transfer
 
-HOST = '127.0.0.1'    # The server's hostname or IP address
+HOST = '185.238.73.50'    # The server's hostname or IP address
 PORT = 9999    # The port used by the server
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    req = AuthRequest(user='billy', passwd='123')
+    req = request.AuthRequest(user='billy', passwd='123')
     # Send it to a server as JSON
     transfer.send(s, req)
-    resp = AuthResponse.fromJSON(transfer.recieve(s))
+    resp = response.AuthResponse.fromJSON(transfer.recieve(s))
     if resp.type == MessageType.ERR:
         print(resp.description)
         s.close()
@@ -25,29 +25,25 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     myID = resp.sessionID
     # Request files owned and borrowed by the user
     print(myID)
-    req = FileListRequest()
+    req = request.NewFileRequest(fileName='b.txt')
     transfer.send(s, req)
-    resp = FileListResponse.fromJSON(transfer.recieve(s))
+    resp = response.OkResponse.fromJSON(transfer.recieve(s))
+    print(resp)
+    req = request.FileListRequest()
+    transfer.send(s, req)
+    resp = response.FileListResponse.fromJSON(transfer.recieve(s))
     if resp.type == MessageType.ERR:
         print(resp.description)
         s.close()
         exit(1)
-    files = resp.files
-    print(files)
-    # Pull the files owned/borrowed by the user
-    for f in files.keys():
-        time.sleep(2)
-        ownership = files[f]
-        req = PullRequest(file=f)
-        transfer.send(s, req)
-        resp = PullResponse.fromJSON(transfer.recieve(s))
-        if resp.type == MessageType.ERR:
-            print(resp.description)
-            s.close()
-            exit(1)
-        print(f'{f} ({ownership})')
-        print(resp.content)
-    req = PushRequest(file='bfile', content='NEW CONTENT TO FILE B')
-    transfer.send(s, req)
-    resp = OkResponse.fromJSON(transfer.recieve(s))
-    print(resp)
+    for fileID, data in resp.files.items():
+        if data['name'] == 'b.txt':
+            print(data)
+            req = request.PushRequest(fileID=fileID, content='NEW BFILE 2')
+            transfer.send(s, req)
+            resp = response.OkResponse.fromJSON(transfer.recieve(s))
+            print(resp)
+            req = request.PullRequest(fileID=fileID)
+            transfer.send(s, req)
+            resp = response.PullResponse.fromJSON(transfer.recieve(s))
+            print(resp.content)

@@ -35,10 +35,13 @@ LOGLEVEL = _args.loglevel or os.getenv('PLAINSYNC_LOGLEVEL') or DEFAULT_LOGLEVEL
 DEFAULT_LOGFILE = None # STDOUT
 LOGFILE = _args.logfile or os.getenv('PLAINSYNC_LOGFILE') or DEFAULT_LOGFILE
 
+
+DATETIME_FMT = '%Y-%m-%d %H:%M:%S'
+
 logging.basicConfig(
     format='[%(levelname)s] [%(asctime)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
     encoding='utf-8',
+    datefmt=DATETIME_FMT,
     level=LOGLEVEL,
     filename=LOGFILE,
 )

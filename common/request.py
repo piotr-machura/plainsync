@@ -19,7 +19,7 @@ class AuthRequest(Request):
     """Authentication request class.
 
     Used by the client to communicate the authentication credentials. The server
-    responds with an `AuthResponse` containing the assigned sessionID or
+    responds with an `AuthResponse` containing the assigned session ID or
     `ErrResponse`.
 
     Items:
@@ -39,13 +39,13 @@ class PushRequest(Request):
     with `OkResponse` if everything went fine or `ErrResponse`.
 
     Items:
-        file: the file to be updated.
+        fileID: the ID of file to be updated.
         content: the contents to update the file with.
     """
-    def __init__(self, file=None, content=''):
+    def __init__(self, fileID=None, content=''):
         super().__init__(msgType=MessageType.PUSH, )
         self.content = content
-        self.file = file
+        self.fileID = fileID
 
     def __str__(self):
         dictionary = self.__dict__.copy()
@@ -57,23 +57,36 @@ class PushRequest(Request):
 class PullRequest(Request):
     """Pull request class.
 
-    Used by the client to to pull changes from the server. The server reponds
+    Used by the client to to pull changes from the server. The server responds
     with `PullResponse` containing the file contents or `ErrResponse`.
 
     Items:
-        file: the file to be pulled.
+        fileID: the ID of the file to be pulled.
     """
-    def __init__(self, file=None):
+    def __init__(self, fileID=None):
         super().__init__(msgType=MessageType.PULL, )
-        self.file = file
+        self.fileID = fileID
 
 
 class FileListRequest(Request):
     """File list request class.
 
-    Used by the client to request lsiting files the user has access to. The
-    server reponds with `FileListResponse`, containing a dictionary of (file,
-    owner) pairs.
+    Used by the client to request listing files the user has access to. The
+    server responds with `FileListResponse`, containing a dictionary of (file
+    ID, (info)) pairs, where the ID is the unique ID assigned to every file and
+    info is a dicitonary that contains information about the owner, file name,
+    last edited date and last edited user.
     """
     def __init__(self):
         super().__init__(msgType=MessageType.LIST_FILES)
+
+class NewFileRequest(Request):
+    """New file request class.
+
+    Used by the client to request creating a new file for the given user. The
+    server responds with `OkResponse` if the action was successful or
+    `ErrResponse`.
+    """
+    def __init__(self, fileName=None):
+        super().__init__(msgType=MessageType.NEW_FILE)
+        self.fileName = fileName

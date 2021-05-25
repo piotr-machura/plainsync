@@ -4,55 +4,39 @@ Processes request to read/write the database and/or the user files. Raises
 DatabaseException if things go wrong.
 """
 import sqlite3
+import time
 import os
+import hashlib
 from server import config
 
 # Initial database setup
 with sqlite3.connect(config.DATABASE) as con:
-    print(config.DATABASE)
     con.execute(
         '''
         CREATE TABLE IF NOT EXISTS Files (
-            id string,
-            name string,
-            owner string,
-            last_edited timestamp,
-            last_edited_user string
-        );
-        ''')
-
-    con.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS Sessions (
-            id string,
-            user string,
-            now_editing string
+            id TEXT,
+            name TEXT,
+            owner TEXT,
+            created TEXT,
+            last_edited TEXT,
+            last_edited_user TEXT
         );
         ''')
 
     con.execute(
         '''
         CREATE TABLE IF NOT EXISTS Users (
-            username string,
-            password string
-        );
-        ''')
-
-    con.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS Links (
-            id string,
-            file string,
-            valid_until timestamp
+            username TEXT,
+            password TEXT
         );
         ''')
 
     con.execute(
         '''
         CREATE TABLE IF NOT EXISTS Shares (
-            id string,
-            user string,
-            file string
+            id TEXT,
+            user TEXT,
+            file TEXT
         );
         ''')
     con.commit()
@@ -83,8 +67,7 @@ class DatabaseManager:
         Raises:
             DatabaseException if not authenticated.
         """
-        cur = self.dbConnection.cursor()
-        if not cur.execute(
+        if not self.dbConnection.execute(
                 '''
             SELECT * FROM "Users" WHERE "username"=? AND "password"=?;
             ''',
@@ -107,8 +90,7 @@ class DatabaseManager:
             DatabaseException if the user does not exist.
         """
         fileList = dict()
-        cur = self.dbConnection.cursor()
-        owned = cur.execute(
+        owned = self.dbConnection.execute(
             '''
             SELECT * FROM Files WHERE owner=?;
             ''',
@@ -116,7 +98,7 @@ class DatabaseManager:
         ).fetchall()
 
         sharedIDs = [
-            fileID[0] for fileID in cur.execute(
+            fileID[0] for fileID in self.dbConnection.execute(
                 '''
             SELECT file FROM Shares WHERE user=?;
             ''',
@@ -124,22 +106,21 @@ class DatabaseManager:
             )
         ]
         borrowed = [
-            cur.execute(
+            self.dbConnection.execute(
                 '''
                 SELECT * FROM Files WHERE id=?;
                 ''',
                 (fileID, ),
             ).fetchone() for fileID in sharedIDs
         ]
-        print(owned)
-        print(borrowed)
         for row in owned:
             fileList[row[0]] = dict()
             fileList[row[0]]['name'] = row[1]
             fileList[row[0]]['owner'] = row[2]
-            fileList[row[0]]['last_edited'] = row[3]
-            fileList[row[0]]['last_edited_user'] = row[4]
-            fileList[row[0]]['shares'] = cur.execute(
+            fileList[row[0]]['created'] = row[3]
+            fileList[row[0]]['last_edited'] = row[4]
+            fileList[row[0]]['last_edited_user'] = row[5]
+            fileList[row[0]]['shares'] = self.dbConnection.execute(
                 '''
                 SELECT id, user FROM Shares WHERE file=?
                 ''',
@@ -149,10 +130,9 @@ class DatabaseManager:
             fileList[row[0]] = dict()
             fileList[row[0]]['name'] = row[1]
             fileList[row[0]]['owner'] = row[2]
-            fileList[row[0]]['last_edited'] = row[3]
-            fileList[row[0]]['last_edited_user'] = row[4]
-
-        print(fileList)
+            fileList[row[0]]['created'] = row[3]
+            fileList[row[0]]['last_edited'] = row[4]
+            fileList[row[0]]['last_edited_user'] = row[5]
         return fileList
 
     def pullFile(self, username, fileID):
@@ -168,13 +148,12 @@ class DatabaseManager:
         Raises:
             DatabaseException if user has no access to specified file.
         """
-        cur = self.dbConnection.cursor()
-        if cur.execute(
+        if self.dbConnection.execute(
                 '''
             SELECT 1 FROM Files WHERE id=? AND owner=?
             ''',
             (fileID, username),
-        ).fetchone() or cur.execute(
+        ).fetchone() or self.dbConnection.execute(
                 '''
                 SELECT 1 FROM Shares WHERE file=? AND user=?
                 ''',
@@ -184,6 +163,32 @@ class DatabaseManager:
                 return fRequested.read()
         raise DatabaseException(
             f'User {username} has no access to file {fileID}')
+
+    def newFile(self, username, fileName):
+        """Create new file for specified user.
+        """
+        if self.dbConnection.execute(
+                '''
+            SELECT * FROM Files WHERE owner=? AND name=?
+            ''',
+            (username, fileName),
+        ).fetchall():
+            raise DatabaseException(
+                f'User {username} already has a file named {fileName}')
+        fileID = str(time.time()) + username + fileName
+        fileID = hashlib.sha1(fileID.encode('utf-8')).hexdigest()
+        self.dbConnection.execute(
+            '''
+            INSERT INTO Files VALUES (?,?,?,?,?,?)
+        ''', (
+                fileID,
+                fileName,
+                username,
+                time.strftime(config.DATETIME_FMT),
+                time.strftime(config.DATETIME_FMT),
+                username,
+            ))
+        self.dbConnection.commit()
 
     def pushFile(self, username, fileID, contents):
         """Push file contents to the server.
@@ -196,13 +201,14 @@ class DatabaseManager:
         Raises:
             DatabaseException if user has no access to specified file.
         """
-        cur = self.dbConnection.cursor()
-        if cur.execute(    # Check if the user owns the file
+        # Check if the user owns the file
+        if self.dbConnection.execute(
                 '''
             SELECT 1 FROM Files WHERE id=? AND owner=?
             ''',
             (fileID, username),
-        ).fetchone() or cur.execute(    # or the file has been shared with him
+        ).fetchone() or self.dbConnection.execute(
+        # Or the file has been shared with him
                 '''
             SELECT 1 FROM Shares WHERE file=? AND user=?
             ''',
@@ -210,6 +216,13 @@ class DatabaseManager:
         ).fetchone():
             with open(config.STORAGE + os.sep + fileID, "w") as fRequested:
                 fRequested.write(contents)
+            self.dbConnection.execute(
+                '''
+                UPDATE Files SET last_edited=?, last_edited_user=? WHERE id=?
+                ''',
+                (time.strftime(config.DATETIME_FMT), username, fileID),
+            )
+            self.dbConnection.commit()
         else:
             raise DatabaseException(
                 f'User {username} has no access to file {fileID}')

@@ -27,7 +27,7 @@ class OkResponse(Response):
     Args:
         action: string describing the succesfull action.
     """
-    def __init__(self, action=''):
+    def __init__(self, action=None):
         super().__init__(
             msgType=MessageType.OK,
             description=f'Action: {action} :: Success.',
@@ -42,10 +42,10 @@ class PullResponse(Response):
     Args:
         content: contents of the specified file.
     """
-    def __init__(self, file='', content=''):
+    def __init__(self, fileID=None, content=None):
         super().__init__(
             msgType=MessageType.PULL,
-            description=f'Sending file contents: {file}',
+            description=f'Sending file contents: {fileID}',
         )
         self.content = content
 
@@ -86,7 +86,7 @@ class FileListResponse(Response):
             every file and info is a dicitonary that contains information about
             the owner, file name, last edited date and last edited user.
     """
-    def __init__(self, files=None, user=''):
+    def __init__(self, files=None, user=None):
         super().__init__(
             msgType=MessageType.LIST_FILES,
             description=f'Sending file list: {user}',
@@ -104,7 +104,7 @@ class ErrResponse(Response):
     Args:
         err: error description with optional stack trace.
     """
-    def __init__(self, err=''):
+    def __init__(self, err=None):
         super().__init__(
             msgType=MessageType.ERR,
             description=f'Error: {err}.',

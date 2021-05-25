@@ -7,4 +7,4 @@ services:
     ports:
       - '9999:9999'
     volumes:
-      - ./data/server:/plainsync/data/server
+      - ./data:/plainsync/data

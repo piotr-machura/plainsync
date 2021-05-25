@@ -4,14 +4,14 @@ Contains the handler and associated functions.
 """
 import time
 import hashlib
+import logging as log
 from socketserver import BaseRequestHandler
-from logging import info, warning, error
 from json import JSONDecodeError
 
-from common.request import Request, AuthRequest, FileListRequest, PullRequest, PushRequest
-from common.response import ErrResponse, OkResponse, FileListResponse, PullResponse, AuthResponse
-from common.message import MessageType
+from common import request
+from common import response
 from common import transfer
+from common.message import MessageType
 
 from server.dbmanager import DatabaseException
 from server import dbmanager
@@ -34,7 +34,7 @@ class TCPHandler(BaseRequestHandler):
         # Try to authenticate
         try:
             data = transfer.recieve(self.request)
-            req = AuthRequest.fromJSON(data)
+            req = request.AuthRequest.fromJSON(data)
             if req.type != MessageType.AUTH:
                 raise DatabaseException('Authenticate first')
             # Authenticate
@@ -46,21 +46,21 @@ class TCPHandler(BaseRequestHandler):
             sessionID = hashlib.sha1(sessionID.encode('utf-8'))
             self.sessionID = sessionID.hexdigest()[:12]
             self.username = user
-            resp = AuthResponse(
+            resp = response.AuthResponse(
                 sessionID=self.sessionID,
                 user=user,
             )
-            info('New session %s of user %s', self.sessionID, self.username)
+            log.info('New session %s of user %s', self.sessionID, self.username)
         except (JSONDecodeError, TypeError, AttributeError) as ex:
-            resp = ErrResponse(err=f'Could not parse request: {ex}')
-            warning(
+            resp = response.ErrResponse(err=f'Could not parse request: {ex}')
+            log.warning(
                 'Unable to authenticate %s: %s',
                 self.client_address[0],
                 resp.description,
             )
         except DatabaseException as ex:
-            resp = ErrResponse(err=ex)
-            warning(
+            resp = response.ErrResponse(err=ex)
+            log.warning(
                 'Unable to authenticate %s: %s',
                 self.client_address[0],
                 resp.description,
@@ -76,61 +76,66 @@ class TCPHandler(BaseRequestHandler):
             # Handle incoming requests
             try:
                 data = transfer.recieve(self.request)
-                request = Request.fromJSON(data)
-                if request.type == MessageType.LIST_FILES:
-                    request = FileListRequest.fromJSON(data)
-                    response = FileListResponse(
+                req = request.Request.fromJSON(data)
+                if req.type == MessageType.LIST_FILES:
+                    req = request.FileListRequest.fromJSON(data)
+                    resp = response.FileListResponse(
                         files=self.dataBase.listFiles(self.username),
                         user=self.username,
                     )
-                elif request.type == MessageType.PULL:
-                    request = PullRequest.fromJSON(data)
-                    response = PullResponse(
-                        file=request.file,
+                elif req.type == MessageType.PULL:
+                    req = request.PullRequest.fromJSON(data)
+                    resp = response.PullResponse(
+                        fileID=req.fileID,
                         content=self.dataBase.pullFile(
                             self.username,
-                            request.file,
+                            req.fileID,
                         ),
                     )
-                elif request.type == MessageType.PUSH:
-                    # Same here but I'm lazy
-                    request = PushRequest.fromJSON(data)
+                elif req.type == MessageType.PUSH:
+                    req = request.PushRequest.fromJSON(data)
                     self.dataBase.pushFile(
                         self.username,
-                        request.file,
-                        request.content,
+                        req.fileID,
+                        req.content,
                     )
-                    response = OkResponse(action=f'Push file {request.file}')
+                    resp = response.OkResponse(action=f'Push file {req.fileID}')
+                elif req.type == MessageType.NEW_FILE:
+                    req = request.NewFileRequest.fromJSON(data)
+                    self.dataBase.newFile(
+                        self.username,
+                        req.fileName,
+                    )
+                    resp = response.OkResponse(action=f'Create new file {req.fileName}')
                 else:
-                    raise DatabaseException(f'Unknown action: {request.type}')
+                    raise DatabaseException(f'Unknown action: {req.type}')
             except DatabaseException as ex:
-                response = ErrResponse(err=f'{ex}')
-                error(
+                resp = response.ErrResponse(err=f'{ex}')
+                log.error(
                     'Session %s of user %s: Request:%s Response:%s',
                     self.sessionID,
                     self.username,
-                    request,
-                    response,
+                    req,
+                    resp,
                 )
             except (JSONDecodeError, TypeError, AttributeError) as ex:
-                response = ErrResponse(err=f'Malformed request: {ex}')
-                error(
+                resp = response.ErrResponse(err=f'Malformed request: {ex}')
+                log.error(
                     'Session %s of user %s: %s',
                     self.sessionID,
                     self.username,
-                    response.description,
+                    resp.description,
                 )
                 break
             except ConnectionAbortedError:
                 break
             else:
-                info(
+                log.info(
                     'Session %s of user %s: Request:%s Response:%s',
                     self.sessionID,
                     self.username,
-                    request,
-                    response,
+                    req,
+                    resp,
                 )
-            print(response)
-            transfer.send(self.request, response)
-        info('Closed session %s of user %s', self.sessionID, self.username)
+            transfer.send(self.request, resp)
+        log.info('Closed session %s of user %s', self.sessionID, self.username)

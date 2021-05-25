@@ -95,6 +95,12 @@ class FileListResponse(Response):
         if self.files is None:
             self.files = dict()
 
+    def __str__(self):
+        dictionary = self.__dict__.copy()
+        del dictionary['files']
+        return json.dumps(dictionary)
+
+
 class ErrResponse(Response):
     """ Error response class.
 

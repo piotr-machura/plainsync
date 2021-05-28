@@ -20,6 +20,9 @@ class MessageType(str, Enum):
     PULL = 'PULL'
     LIST_FILES = 'LIST_FILES'
     NEW_FILE = 'NEW_FILE'
+    DELETE_FILE = 'DELETE_FILE'
+    NEW_SHARE = 'NEW_SHARE'
+    DELETE_SHARE = 'DELETE_SHARE'
 
 
 class Message():

@@ -50,7 +50,8 @@ class TCPHandler(BaseRequestHandler):
                 sessionID=self.sessionID,
                 user=user,
             )
-            log.info('New session %s of user %s', self.sessionID, self.username)
+            log.info(
+                'New session %s of user %s', self.sessionID, self.username)
         except (JSONDecodeError, TypeError, AttributeError) as ex:
             resp = response.ErrResponse(err=f'Could not parse request: {ex}')
             log.warning(
@@ -99,14 +100,42 @@ class TCPHandler(BaseRequestHandler):
                         req.fileID,
                         req.content,
                     )
-                    resp = response.OkResponse(action=f'Push file {req.fileID}')
+                    resp = response.OkResponse(
+                        action=f'Push file {req.fileID}')
                 elif req.type == MessageType.NEW_FILE:
                     req = request.NewFileRequest.fromJSON(data)
                     self.dataBase.newFile(
                         self.username,
                         req.fileName,
                     )
-                    resp = response.OkResponse(action=f'Create new file {req.fileName}')
+                    resp = response.OkResponse(
+                        action=f'Create new file {req.fileName}')
+                elif req.type == MessageType.DELETE_FILE:
+                    req = request.DeleteFileRequest.fromJSON(data)
+                    ownedOrShared = self.dataBase.deleteFile(
+                        self.username,
+                        req.fileID,
+                    )
+                    resp = response.OkResponse(
+                        action=f'Delete {ownedOrShared} file { req.fileID }')
+                elif req.type == MessageType.NEW_SHARE:
+                    req = request.NewShareRequest.fromJSON(data)
+                    self.dataBase.newShare(
+                        req.fileID,
+                        self.username,
+                        req.user,
+                    )
+                    resp = response.OkResponse(
+                        action=f'Share file {req.fileID} to {req.user}')
+                elif req.type == MessageType.DELETE_SHARE:
+                    req = request.DeleteShareRequest.fromJSON(data)
+                    self.dataBase.deleteShare(
+                        req.fileID,
+                        self.username,
+                        req.user,
+                    )
+                    resp = response.OkResponse(
+                        action=f'Unshare file {req.fileID} from {req.user}')
                 else:
                     raise DatabaseException(f'Unknown action: {req.type}')
             except DatabaseException as ex:

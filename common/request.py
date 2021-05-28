@@ -90,3 +90,46 @@ class NewFileRequest(Request):
     def __init__(self, fileName=None):
         super().__init__(msgType=MessageType.NEW_FILE)
         self.fileName = fileName
+
+class DeleteFileRequest(Request):
+    """File deletion request.
+
+    Used by the client to request deleting specified file for the given user.
+    If the file is owned by the user then it is permanently deleted, if it's
+    shared then the share is deleted (user no longer has an access to it, but
+    the owner and other shared users still do).
+
+    The server responds with `OkResponse` if the action was successful or
+    `ErrResponse`.
+    """
+    def __init__(self, fileID=None):
+        super().__init__(msgType=MessageType.DELETE_FILE)
+        self.fileID = fileID
+
+class NewShareRequest(Request):
+    """New share request.
+
+    Used by the client to request sharing the file to specified user.
+
+    The server responds with `OkResponse` if the action was successful or
+    `ErrResponse`.
+    """
+    def __init__(self, fileID=None, user=None):
+        super().__init__(msgType=MessageType.NEW_SHARE)
+        self.fileID = fileID
+        self.user = user
+
+class DeleteShareRequest(Request):
+    """Request to delete a share.
+
+    Used by the client to request unsharing the file from specified user. Owner
+    can delete any share, but every user can delete a share made to him (same
+    effect as issuing a DeleteFileRequest).
+
+    The server responds with `OkResponse` if the action was successful or
+    `ErrResponse`.
+    """
+    def __init__(self, fileID=None, user=None):
+        super().__init__(msgType=MessageType.DELETE_SHARE)
+        self.fileID = fileID
+        self.user = user

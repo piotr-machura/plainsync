@@ -3,7 +3,8 @@ LICENSE
 data
 __pycache__
 Dockerfile
-client.py
+docker-compose.yml
+ps_client.py
 .git
 .gitignore
 client/

@@ -25,6 +25,8 @@ PORT = int(PORT)
 
 DEFAULT_STORAGE = os.getcwd() + os.sep + 'data'
 STORAGE = _args.storage or os.getenv('PLAINSYNC_STORAGE') or DEFAULT_STORAGE
+# Create the path if it does not exist
+os.makedirs(STORAGE, exist_ok=True)
 
 DEFAULT_DATABASE = STORAGE + os.sep + 'plainsync.sqlite'
 DATABASE = _args.database or os.getenv('PLAINSYNC_DATABASE') or DEFAULT_DATABASE

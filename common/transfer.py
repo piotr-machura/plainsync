@@ -12,7 +12,7 @@ def recieve(sock):
         ConnectionAbortedError when null is read from the first 8 bytes.
     """
     msgLen = int.from_bytes(sock.recv(8).strip(), byteorder='big')
-    if msgLen == 0:
+    if msgLen == 0 or msgLen > 1e9:
         raise ConnectionAbortedError
     return sock.recv(msgLen).decode('utf-8')
 

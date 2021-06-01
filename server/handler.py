@@ -66,7 +66,11 @@ class TCPHandler(BaseRequestHandler):
                 self.client_address[0],
                 resp.description,
             )
-        except (ConnectionAbortedError, MemoryError, ConnectionResetError):
+        except (
+                ConnectionAbortedError,
+                UnicodeDecodeError,
+                ConnectionResetError,
+        ):
             return
         transfer.send(self.request, resp)
 

@@ -8,7 +8,7 @@ import time
 import os
 import hashlib
 import sys
-from logging import error, debug
+from logging import error, info
 from server import config
 
 # Initial database schema
@@ -44,7 +44,8 @@ except (sqlite3.DatabaseError, sqlite3.OperationalError) as ex:
     error(f'Fatal error creating database at {config.DATABASE}: {ex}')
     sys.exit(1)
 else:
-    debug(f'Initialized database at {config.DATABASE}')
+    info(f'Initialized database at {config.DATABASE}')
+    info(f'File storage is at {config.STORAGE}')
 
 
 class DatabaseException(Exception):
@@ -387,7 +388,7 @@ class DatabaseManager:
                 self.dbConnection.commit()
             else:
                 raise DatabaseException(
-                    f'File {fileID} is not shared to {userToUnshare}.')
+                    f'File {fileID} is not shared to {userToUnshare}')
         else:
             raise DatabaseException(
-                f'Can\'t unshare file {fileID} from user {userToUnshare}.')
+                f'Can\'t unshare file {fileID} from user {userToUnshare}')

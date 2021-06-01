@@ -7,39 +7,44 @@ import sqlite3
 import time
 import os
 import hashlib
-from operator import xor
+import sys
+from logging import error, debug
 from server import config
 
-# Initial database setup
-with sqlite3.connect(config.DATABASE) as con:
-    con.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS Files (
-            id TEXT,
-            name TEXT,
-            owner TEXT,
-            created TEXT,
-            last_edited TEXT,
-            last_edited_user TEXT
-        );
-        ''')
-
-    con.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS Users (
-            username TEXT,
-            password TEXT
-        );
-        ''')
-
-    con.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS Shares (
-            user TEXT,
-            file TEXT
-        );
-        ''')
-    con.commit()
+# Initial database schema
+try:
+    with sqlite3.connect(config.DATABASE) as con:
+        con.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS Files (
+                id TEXT,
+                name TEXT,
+                owner TEXT,
+                created TEXT,
+                last_edited TEXT,
+                last_edited_user TEXT
+            );
+            ''')
+        con.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS Users (
+                username TEXT,
+                password TEXT
+            );
+            ''')
+        con.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS Shares (
+                user TEXT,
+                file TEXT
+            );
+            ''')
+        con.commit()
+except (sqlite3.DatabaseError, sqlite3.OperationalError) as ex:
+    error(f'Fatal error creating database at {config.DATABASE}: {ex}')
+    sys.exit(1)
+else:
+    debug(f'Initialized database at {config.DATABASE}')
 
 
 class DatabaseException(Exception):

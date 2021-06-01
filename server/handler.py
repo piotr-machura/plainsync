@@ -156,7 +156,7 @@ class TCPHandler(BaseRequestHandler):
                     resp.description,
                 )
                 break
-            except ConnectionAbortedError:
+            except (ConnectionAbortedError, ConnectionResetError):
                 break
             else:
                 log.info(

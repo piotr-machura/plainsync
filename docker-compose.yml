@@ -1,10 +1,10 @@
 version: '3.3'
 services:
   plainsync:
+    image: piotrmachura/plainsync-server
     container_name: plainsync-server
-    build: .
-    image: plainsync
     ports:
       - '9999:9999'
     volumes:
       - ./data:/plainsync/data
+      - /etc/localtime:/etc/localtime:ro

@@ -1,7 +1,8 @@
-""" Transfer module.
+"""Transfer module.
 
-Contains a set of common tools for sending and recieving messages.
+This module contains a common tools for sending and recieving messages.
 """
+
 
 def recieve(sock):
     """Recieve a message as a JSON string from the specified TCP socket.
@@ -11,10 +12,11 @@ def recieve(sock):
     Raises:
         ConnectionAbortedError when null is read from the first 8 bytes.
     """
-    msgLen = int.from_bytes(sock.recv(8).strip(), byteorder='big')
+    msgLen = int.from_bytes(sock.recv(2).strip(), byteorder='big')
     if msgLen == 0:
         raise ConnectionAbortedError
     return sock.recv(msgLen).decode('utf-8')
+
 
 def send(socket, message):
     """
@@ -25,5 +27,5 @@ def send(socket, message):
     message as UTF-8 encoded JSON bytes object follows.
     """
     payload = message.toJSON().encode('utf-8')
-    payload = len(payload).to_bytes(8, byteorder='big', signed=False)+payload
+    payload = len(payload).to_bytes(2, byteorder='big', signed=False) + payload
     socket.sendall(payload)

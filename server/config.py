@@ -7,13 +7,32 @@ import argparse
 import logging
 import os
 
-_parser = argparse.ArgumentParser(description='Plainsync server executable.')
-_parser.add_argument('--host', help='sets the hostname for TCP server')
-_parser.add_argument('--port', type=int, help='sets the port number for TCP server')
-_parser.add_argument('--database', help='sets the path to the sqlite database')
-_parser.add_argument('--storage', help='sets the path to the storage directory')
-_parser.add_argument('--loglevel', help='set the logging level (default INFO)')
-_parser.add_argument('--logfile', help='set the log file (default STDOUT)')
+_parser = argparse.ArgumentParser(description='Plainsync server executable.', )
+_parser.add_argument(
+    '--host',
+    help='sets the hostname for TCP server',
+)
+_parser.add_argument(
+    '--port',
+    type=int,
+    help='sets the port number for TCP server',
+)
+_parser.add_argument(
+    '--database',
+    help='sets the path to the sqlite database',
+)
+_parser.add_argument(
+    '--storage',
+    help='sets the path to the storage directory',
+)
+_parser.add_argument(
+    '--loglevel',
+    help='set the logging level (default INFO)',
+)
+_parser.add_argument(
+    '--logfile',
+    help='set the log file (default STDOUT)',
+)
 _args = _parser.parse_args()
 
 DEFAULT_HOST = 'localhost'
@@ -25,16 +44,19 @@ PORT = int(PORT)
 
 DEFAULT_STORAGE = os.getcwd() + os.sep + 'data'
 STORAGE = _args.storage or os.getenv('PLAINSYNC_STORAGE') or DEFAULT_STORAGE
+# Create the path if it does not exist
+os.makedirs(STORAGE, exist_ok=True)
 
 DEFAULT_DATABASE = STORAGE + os.sep + 'plainsync.sqlite'
-DATABASE = _args.database or os.getenv('PLAINSYNC_DATABASE') or DEFAULT_DATABASE
+DATABASE = _args.database or os.getenv(
+    'PLAINSYNC_DATABASE') or DEFAULT_DATABASE
 
 DEFAULT_LOGLEVEL = 'INFO'
-LOGLEVEL = _args.loglevel or os.getenv('PLAINSYNC_LOGLEVEL') or DEFAULT_LOGLEVEL
+LOGLEVEL = _args.loglevel or os.getenv(
+    'PLAINSYNC_LOGLEVEL') or DEFAULT_LOGLEVEL
 
-DEFAULT_LOGFILE = None # STDOUT
+DEFAULT_LOGFILE = None    # STDOUT
 LOGFILE = _args.logfile or os.getenv('PLAINSYNC_LOGFILE') or DEFAULT_LOGFILE
-
 
 DATETIME_FMT = '%Y-%m-%d %H:%M:%S'
 

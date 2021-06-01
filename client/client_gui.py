@@ -2,7 +2,6 @@ import sys
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QWidget, QTextEdit, QPushButton, QInputDialog
 
-import time
 import socket
 
 from common import request
@@ -55,7 +54,12 @@ class OperatingWindow(QWidget):
         self.deleteButton = QPushButton("Delete")
         self.deleteButton.clicked.connect(self.deleteButtonClicked)
 
-        self.shareButton = QPushButton("Share")
+        self.newShareButton = QPushButton("New share")
+        self.newShareButton.clicked.connect(self.newSharebuttonClicked)
+
+        self.deleteShareButton = QPushButton("Delete share")
+        self.deleteShareButton.clicked.connect(self.deleteSharebuttonClicked)
+
         self.closeButton = QPushButton("Close")
         self.closeButton.clicked.connect(self.closeButtonClicked)
 
@@ -64,7 +68,7 @@ class OperatingWindow(QWidget):
         buttonPanel.addWidget(self.openButton)
         buttonPanel.addWidget(self.addButton)
         buttonPanel.addWidget(self.deleteButton)
-        buttonPanel.addWidget(self.shareButton)
+        buttonPanel.addWidget(self.newShareButton)
         buttonPanel.addWidget(self.closeButton)
 
         container.addLayout(buttonPanel)
@@ -96,14 +100,19 @@ class OperatingWindow(QWidget):
         file, okPressed = QInputDialog.getItem(self, "Select file to delete", "Files:", self.files, 0, False)
         if okPressed and file:
             fileID = ["{} {}".format(index1, index2) for index1, value1
-                      in enumerate(self.filesID) for index2, value2 in enumerate(value1) if value2 == file][0][1]
+                      in enumerate(self.filesID) for index2, value2 in enumerate(value1) if value2 == file]
+            num = int(fileID[0][0])
+            fileID = self.filesID[num][1]
             req = request.DeleteFileRequest(fileID)
             transfer.send(self.connection, req)
             resp = response.ErrResponse.fromJSON(transfer.recieve(self.connection))
             FunnyClassForErrorMsg().showError(self, resp.description)
             self.refreshFileList()
 
-    def sharebuttonClicked(self):
+    def newSharebuttonClicked(self):
+        pass
+
+    def deleteSharebuttonClicked(self):
         pass
 
     def closeButtonClicked(self):
@@ -173,8 +182,12 @@ class MainWindow(QMainWindow):
 
             s = Connection().getSocket()
             req = request.AuthRequest(user=self.username, passwd=self.passwd)
+            print(1)
             transfer.send(s, req)
+            print(2)
             resp = response.AuthResponse.fromJSON(transfer.recieve(s))
+            print(3)
+            print(resp)
             if resp.type == MessageType.ERR:
                 FunnyClassForErrorMsg().showError(self, resp.description)
             else:
@@ -187,6 +200,10 @@ class MainWindow(QMainWindow):
                 else:
                     self.operatingWindow.close()
                     self.operatingWindow = None
+
+
+def main():
+    pass
 
 
 if __name__ == "__main__":

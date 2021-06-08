@@ -3,9 +3,8 @@
 passwords**. Please, don't use this.
 
 ## Server
-The recommended way of setting up the server is using Docker. The image can be pulled from
-[here](https://hub.docker.com/r/piotrmachura/plainsync-server). See [example
-docker-compose](https://github.com/piotr-machura/plainsync/blob/master/docker-compose.yml) for basic usage.
+The recommended way of setting up the server is using Docker. The image can be built and run  by running `docker-compose
+up -d` in the project's root.
 
 Configuration is done through command line options (see `python ps_server.py --help`) or environment variables. Keep in
 mind that CLI options take precedence. The storage location directory will be automatically created if it does not

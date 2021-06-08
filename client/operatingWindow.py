@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMessageBox, QWidget, QTextEdit, QPushButton, QInputDialog
+from PyQt5.QtWidgets import QMessageBox, QWidget, QTextEdit, QPushButton, QInputDialog, QTreeWidget, QTreeWidgetItem
 
 from common import request
 from common import response
@@ -8,13 +8,14 @@ from common import transfer
 
 from client.errors import FunnyClassForErrorMsg
 from client.shareWindow import ShareWindow
+from client.fileWindow import fileWindow
 
 
 class OperatingWindow(QWidget):
     def __init__(self, user):
         super(QWidget, self).__init__()
         self.setGeometry(300, 300, 500, 350)
-        self.setWindowTitle("Title")
+        self.setWindowTitle("Witam w pięknym programie")
 
         self.user = user
         self.connection = None
@@ -22,13 +23,17 @@ class OperatingWindow(QWidget):
         self.initUserBoard()
 
     def initUserBoard(self):
-        container = QtWidgets.QHBoxLayout()
-        buttonPanel = QtWidgets.QVBoxLayout()
+        container = QtWidgets.QVBoxLayout()
+        buttonPanel = QtWidgets.QHBoxLayout()
 
-        self.fileList = QTextEdit()
-        self.fileList.setReadOnly(True)
-        self.fileList.setMaximumSize(300, 300)
-        self.fileList.setText(f'Files for user: \n{self.user}')
+        self.fileTree = QTreeWidget(self)
+        self.fileTree.setMaximumSize(500, 300)
+        self.fileTree.setColumnCount(4)
+        self.fileTree.setColumnWidth(0, 120)
+        self.fileTree.setColumnWidth(1, 120)
+        self.fileTree.setColumnWidth(2, 120)
+        self.fileTree.setColumnWidth(3, 80)
+        self.fileTree.setHeaderLabels(["Name", "Created", "Last Edit", "Last Editor"])
 
         self.openButton = QPushButton("Open")
         self.openButton.clicked.connect(self.openButtonClicked)
@@ -45,7 +50,7 @@ class OperatingWindow(QWidget):
         self.closeButton = QPushButton("Close")
         self.closeButton.clicked.connect(self.closeButtonClicked)
 
-        container.addWidget(self.fileList)
+        container.addWidget(self.fileTree)
 
         buttonPanel.addWidget(self.openButton)
         buttonPanel.addWidget(self.addButton)
@@ -60,14 +65,15 @@ class OperatingWindow(QWidget):
         self.connection = connection
 
     def openButtonClicked(self):
-        req = request.FileListRequest()
-        transfer.send(self.connection, req)
-        resp = response.FileListResponse.fromJSON(transfer.recieve(self.connection))
-        if resp.type == MessageType.ERR:
-            print(resp.description)
-        else:
-            for fileID, data in resp.files.items():
-                print(data)
+        seletedFile = self.fileTree.selectedItems()
+        if seletedFile:
+            filename = seletedFile[0].text(0)
+            fileID = self.getFileID(filename)
+            content = self.getFileContent(fileID)
+
+            self.fileWindow = fileWindow(filename, fileID, content)
+            self.fileWindow.set_connection(self.connection)
+            self.fileWindow.show()
 
     def addButtonClicked(self):
         text, ok = QInputDialog.getText(self, 'Creating new file', 'Type filename')
@@ -79,12 +85,10 @@ class OperatingWindow(QWidget):
             self.refreshFileList()
 
     def deleteButtonClicked(self):
-        file, okPressed = QInputDialog.getItem(self, "Select file to delete", "Files:", self.files, 0, False)
-        if okPressed and file:
-            fileID = ["{} {}".format(index1, index2) for index1, value1
-                      in enumerate(self.filesID) for index2, value2 in enumerate(value1) if value2 == file]
-            num = int(fileID[0][0])
-            fileID = self.filesID[num][1]
+        seletedFile = self.fileTree.selectedItems()
+        if seletedFile:
+            filename = seletedFile[0].text(0)
+            fileID = self.getFileID(filename)
 
             req = request.DeleteFileRequest(fileID)
             transfer.send(self.connection, req)
@@ -109,9 +113,55 @@ class OperatingWindow(QWidget):
             QMessageBox.question(self, 'Error', resp.description, QMessageBox.Ok,
                                  QMessageBox.Ok)
         else:
-
             files = [data["name"] for fileID, data in resp.files.items() if data['owner'] == self.user]
+            self.shared_files = [data["name"] for fileID, data in resp.files.items() if data['owner'] != self.user]
             self.filesID = [[data["name"], fileID] for fileID, data in resp.files.items() if data['owner'] == self.user]
             self.files = files
 
-            self.fileList.setText(''.join(self.files))
+            files_dict = {f'Files for user {self.user}': files,
+                          'Shared': self.shared_files}
+            items = []
+            for key, values in files_dict.items():
+                item = QTreeWidgetItem([key])
+                for value in values:
+                    fileInfo = self.getFileInfo(value) #created, last_edit, last_edited_user
+                    child = QTreeWidgetItem([value, fileInfo[0], fileInfo[1], fileInfo[2]])
+                    item.addChild(child)
+                items.append(item)
+
+            self.fileTree.clear()
+            self.fileTree.insertTopLevelItems(0, items)
+
+    def getFileID(self, filename):
+        req = request.FileListRequest()
+        transfer.send(self.connection, req)
+        resp = response.FileListResponse.fromJSON(transfer.recieve(self.connection))
+        if resp.type == MessageType.ERR:
+            QMessageBox.question(self, 'Error', resp.description, QMessageBox.Ok,
+                                 QMessageBox.Ok)
+        else:
+            fileID = [fileID for fileID, data in resp.files.items() if data["name"] == filename]
+            return fileID[0]
+
+    def getFileInfo(self, filename):
+        req = request.FileListRequest()
+        transfer.send(self.connection, req)
+        resp = response.FileListResponse.fromJSON(transfer.recieve(self.connection))
+        if resp.type == MessageType.ERR:
+            QMessageBox.question(self, 'Error', resp.description, QMessageBox.Ok,
+                                 QMessageBox.Ok)
+        else:
+            fileInfo = [[data["created"], data["last_edited"], data["last_edited_user"]]
+                      for fileID, data in resp.files.items() if data["name"] == filename]
+            return fileInfo[0]
+
+    def getFileContent(self, fileID):
+        req = request.PullRequest(fileID)
+        transfer.send(self.connection, req)
+        resp = response.FileListResponse.fromJSON(transfer.recieve(self.connection))
+        if resp.type == MessageType.ERR:
+            QMessageBox.question(self, 'Error', resp.description, QMessageBox.Ok,
+                                 QMessageBox.Ok)
+        else:
+            content = resp.content
+            return content

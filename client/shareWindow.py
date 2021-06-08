@@ -20,7 +20,7 @@ class ShareWindow(QWidget):
 
     def initUI(self):
         self.userLabel = QtWidgets.QLabel(self)
-        self.userLabel.setText("Share to user: ")
+        self.userLabel.setText("User: ")
         self.userLabel.move(70, 50)
 
         self.userTextBox = QtWidgets.QLineEdit(self)

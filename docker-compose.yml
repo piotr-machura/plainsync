@@ -1,7 +1,8 @@
 version: '3.3'
 services:
   plainsync:
-    image: piotrmachura/plainsync-server
+    image: local/plainsync
+    build: .
     container_name: plainsync-server
     ports:
       - '9999:9999'

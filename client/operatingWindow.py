@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QMessageBox, QWidget, QTextEdit, QPushButton, QInputDialog, QTreeWidget, QTreeWidgetItem
 
 from common import request
@@ -16,6 +16,7 @@ class OperatingWindow(QWidget):
         super(QWidget, self).__init__()
         self.setGeometry(300, 300, 500, 350)
         self.setWindowTitle("Witam w pięknym programie")
+        self.setWindowIcon(QtGui.QIcon('icon.png'))
 
         self.user = user
         self.connection = None

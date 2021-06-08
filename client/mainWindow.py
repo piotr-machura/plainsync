@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow
 
 from common import request
@@ -17,6 +17,7 @@ class MainWindow(QMainWindow):
         self.operatingWindow = None
         self.setGeometry(300, 300, 500, 350)
         self.setWindowTitle("Title")
+        self.setWindowIcon(QtGui.QIcon('icon.png'))
         self.initUI()
 
         # niezabespieczone dane, hakerzy mozecie tutaj patrzec

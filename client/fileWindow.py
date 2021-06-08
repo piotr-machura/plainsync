@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QWidget, QPushButton, QTextEdit
 
 from common import request
@@ -12,6 +12,7 @@ class fileWindow(QWidget):
         super(QWidget, self).__init__()
         self.setGeometry(300, 300, 350, 350)
         self.setWindowTitle(filename)
+        self.setWindowIcon(QtGui.QIcon('icon.png'))
 
         self.connection = None
         self.filename = filename

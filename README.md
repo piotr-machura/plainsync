@@ -3,12 +3,12 @@
 passwords**. Please, don't use this.
 
 ## Plainsync server
-The recommended way of setting up the server is using Docker. The image can be built and run  by running `docker-compose
+The recommended way of setting up the server is using Docker. The image can be built and run by issuing `docker-compose
 up -d` in the project's root.
 
 ### Configuration
-Configuration is done through command line options (see `python ps_server.py --help`) or environment variables. Keep in
-mind that CLI options take precedence. The storage location directory will be automatically created if it does not
+Configuration is done through command line options (see `python ps_server.py --help`) or environment variables, with
+CLI options taking precedence. The storage location directory will be automatically created if it does not
 exist, other locations must be available for the server to start.
 
 Environment variables:
@@ -25,8 +25,8 @@ socket and relegates new connections to instances of `TCPHandler` class, which e
 request.
 
 Every connection is expected to first provide an `AuthRequest`, which is then verified and, upon success, given a
-session ID. The handler then proceeds to answer to incoming requests and ends the session after the connection is
-aborted, or the incoming message cannot be parsed.
+session ID. The handler then answers incoming requests and ends the session after the connection is aborted, or if the
+incoming message cannot be parsed.
 
 Information about available users, their files and file shares is stored in an sqlite database, which is accessed by the
 `TCPHandler` using an instance of `DatabaseManager`. New users must be manually added to the database, for example using
@@ -36,22 +36,24 @@ the sqlite command line client.
 
 ## Protocol details
 The protocol makes use of Python's ability to deconstruct objects into dictionaries, which can then be serialized into
-JSON strings and sent via a TCP connection.
+JSON strings and sent via a TCP connection. Upon receiving the message can be reconstructed into an object, making it
+clear which attributes a message should and should not possess.
 
-Each functionality has its own `Request` object, with the server's `Response` type specified in its docstring. Messages
-are sent over TCP with a 2-byte **proto-header**, which specifies the length of it's message in bytes. The entire
-payload is as follows:
+Each functionality has its own `Request` object, with the servers possible `Response` types specified in its docstring.
+Messages are sent over TCP with a 2-byte **proto-header**, which specifies the length of the JSON message. The
+entire payload is pictured below.
 ```none
+  2 bytes of message length as 16-bit unsigned integer in "big indian" byteorder
+  │
+  ▼
+┌─────────┬──────────────────────────────────────────────────┐
+│ ███████ │ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ │
+└─────────┴──────────────────────────────────────────────────┘
+           ▲
+           │
+           │
            JSON message encoded with UTF-8
-            │
-            ▼
-┌─────────┬───────────────────────────────────────────┐
-│ ███████ │ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│
-└─────────┴───────────────────────────────────────────┘
-   ▲
-   │
-   │
-  Message length as 16-bit unsigned integer in "big indian" byteorder
 ```
 
-The messages can be sent using helper functions found within the `common/transfer.py` module.
+The `common/transfer.py` module provides helper functions for sending and receiving messages in the manner described
+above.

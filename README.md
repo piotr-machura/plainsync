@@ -34,6 +34,8 @@ the sqlite command line client. Files themselves are stored under `PLAINSYNC_STO
 
 ## Plainsync client
 You can run client directly from terminal with command `python ps_client.py`. Once opened, you can log in by typing login and password.
+In the main window, on the left side you can see your files. First column contains names of files you own and files shared with you. Next columns contain information such as:
+date of creation, date of last edit and recent editor.
 
 ### Options available
 As a user, you can use this options:
@@ -44,6 +46,9 @@ File will not be deleted from the server, but only from your shared files.
 - `Share` - You can share your file with other user.
 - `Delte share` - You can stop sharing your file.
 - `Close` - You will be log out and the application will get closed.
+
+### Client backed
+Performing every operation, the client will send a specific request to the server. If the request is sent correctly and the response doesn't contain any error, the result of the operation will be shown on the screen. If any error occurs, it will be shown on the screen and the operation will be aborted. Available requests are described inside the `request.py` file.
 ## Protocol details
 The protocol makes use of Python's ability to deconstruct objects into dictionaries, which can then be serialized into
 JSON strings and sent via a TCP connection. Upon receiving the message can be reconstructed into an object, making it

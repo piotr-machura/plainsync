@@ -33,7 +33,17 @@ Information about available users, their files and file shares is stored in an s
 the sqlite command line client. Files themselves are stored under `PLAINSYNC_STORAGE` and identified by their unique ID.
 
 ## Plainsync client
+You can run client directly from terminal with command `python ps_client.py`. Once opened, you can log in by typing login and password.
 
+### Options available
+As a user, you can use this options:
+- `Open file` - Selected file will be downloaded from server and open. You can modify the file, changes will be send to server if you save the file.
+- `New file` - New file will be created.
+- `Delte file` - Selected file will be deleted from the server. If you try to delete file, that is shared to you by other user you will no longer have acces to this file.
+File will not be deleted from the server, but only from your shared files.
+- `Share` - You can share your file with other user.
+- `Delte share` - You can stop sharing your file.
+- `Close` - You will be log out and the application will get closed.
 ## Protocol details
 The protocol makes use of Python's ability to deconstruct objects into dictionaries, which can then be serialized into
 JSON strings and sent via a TCP connection. Upon receiving the message can be reconstructed into an object, making it
